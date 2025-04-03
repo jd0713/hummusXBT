@@ -106,6 +106,56 @@
         <img src="analysis_results/period2/asset_growth.png" alt="기간 2 자산 성장">
     </div>
     
+    <div class="period">
+        <h2>슬리피지 영향 분석</h2>
+        <p>거래 실행 시 발생하는 슬리피지(0.05%, 0.1%, 0.15%)가 트레이더의 성과에 미치는 영향을 분석했습니다.</p>
+        
+        <h3>기간 1 슬리피지 영향</h3>
+        <div class="metrics">
+            <div class="metric-card">
+                <h3>원본 수익률</h3>
+                <p>1,264.35%</p>
+            </div>
+            <div class="metric-card">
+                <h3>0.05% 슬리피지</h3>
+                <p>1,017.71%</p>
+                <small>차이: -246.63%</small>
+            </div>
+            <div class="metric-card">
+                <h3>0.15% 슬리피지</h3>
+                <p>524.45%</p>
+                <small>차이: -739.90%</small>
+            </div>
+        </div>
+        <img src="analysis_results/slippage_analysis/period_1_asset_growth_comparison.png" alt="기간 1 슬리피지 영향 분석">
+        
+        <h3>기간 2 슬리피지 영향</h3>
+        <div class="metrics">
+            <div class="metric-card">
+                <h3>원본 수익률</h3>
+                <p>99.11%</p>
+            </div>
+            <div class="metric-card">
+                <h3>0.05% 슬리피지</h3>
+                <p>92.09%</p>
+                <small>차이: -7.02%</small>
+            </div>
+            <div class="metric-card">
+                <h3>0.15% 슬리피지</h3>
+                <p>78.05%</p>
+                <small>차이: -21.05%</small>
+            </div>
+        </div>
+        <img src="analysis_results/slippage_analysis/period_2_asset_growth_comparison.png" alt="기간 2 슬리피지 영향 분석">
+        
+        <h3>슬리피지 영향에 대한 실용적 의미</h3>
+        <ul>
+            <li><strong>초기 자본 단계에서의 주의</strong>: 작은 자본으로 시작할 때는 작은 슬리피지도 수익률에 큰 영향을 미칠 수 있음</li>
+            <li><strong>자본 규모에 따른 영향 감소</strong>: 자본 규모가 커질수록 슬리피지의 상대적 영향이 감소함</li>
+            <li><strong>위험 지표 악화</strong>: 슬리피지가 증가함에 따라 MDD와 샤프 비율 같은 위험 지표가 악화됨</li>
+        </ul>
+    </div>
+    
     <h2>종합 평가</h2>
     <p>종합 점수 <strong>9.5/10</strong>으로 평가되는 이 트레이더는 바이낸스 리더보드 Top 1을 목표로 하고 있어 앞으로도 지속적인 성과가 기대됩니다. 그의 거래 스타일과 위험 관리 능력을 고려할 때, 카피 트레이딩 대상으로 충분한 가치가 있다고 판단됩니다.</p>
     
@@ -115,12 +165,19 @@
         <li><strong>전체 기간 분석</strong>: <code>analysis_results/overall/</code></li>
         <li><strong>기간 1 분석</strong>: <code>analysis_results/period1/</code></li>
         <li><strong>기간 2 분석</strong>: <code>analysis_results/period2/</code></li>
+        <li><strong>슬리피지 영향 분석</strong>: <code>analysis_results/slippage_analysis/</code></li>
     </ul>
     
     <h2>실행 방법</h2>
     <p>전체 분석을 실행하려면 다음 명령어를 사용하세요:</p>
     <pre><code>python run_trader_analysis.py</code></pre>
-    <p>이 명령어는 모든 분석과 시각화를 자동으로 생성합니다.</p>
+    <p>이 명령어는 다음 분석을 자동으로 실행합니다:</p>
+    <ul>
+        <li>트레이더 기본 성과 분석</li>
+        <li>시각화 자료 생성</li>
+        <li>자산 성장 그래프 생성</li>
+        <li>슬리피지 영향 분석 (0.05%, 0.1%, 0.15%)</li>
+    </ul>
     
     <footer>
         <p>GitHub 저장소: <a href="https://github.com/jd0713/hummusXBT">https://github.com/jd0713/hummusXBT</a></p>

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import subprocess
+import sys
 from trader_analysis_part1 import *
 from trader_analysis_part2 import *
+# 슬리피지 분석 모듈 임포트
+from analyze_slippage_impact import analyze_slippage_impact
 
 def main():
     """트레이더 분석 실행"""
@@ -37,7 +40,8 @@ def main():
     print("\n===== 자산 성장 그래프 생성 =====")
     try:
         # 현재 스크립트와 같은 디렉토리에 있는 plot_asset_growth.py 실행
-        result = subprocess.run(["python", "plot_asset_growth.py"], 
+        python_cmd = sys.executable  # 현재 실행 중인 Python 인터프리터 경로 사용
+        result = subprocess.run([python_cmd, "plot_asset_growth.py"], 
                               capture_output=True, text=True, check=True)
         # 출력 결과 표시
         print(result.stdout)
@@ -46,6 +50,15 @@ def main():
     except subprocess.CalledProcessError as e:
         print(f"오류: 자산 성장 그래프 생성 중 문제가 발생했습니다.")
         print(f"오류 메시지: {e.stderr}")
+    
+    # 슬리피지 영향 분석 실행
+    print("\n===== 슬리피지 영향 분석 시작 =====")
+    try:
+        # analyze_slippage_impact 함수 직접 호출
+        analyze_slippage_impact()
+    except Exception as e:
+        print(f"오류: 슬리피지 영향 분석 중 문제가 발생했습니다.")
+        print(f"오류 메시지: {str(e)}")
     
     # 분석 요약
     print("\n===== 분석 요약 =====")
