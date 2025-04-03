@@ -36,17 +36,17 @@
 ## 주요 분석 결과
 
 ### 자산 성장
-기간 1에서 hummusXBT는 100K USD에서 시작하여 단 222일 만에 1,264% 수익률을 달성했습니다. 이는 연율화 수익률로 환산하면 7,266%에 달하는 놀라운 성과입니다. [기간 1 자산 성장 그래프](analysis_results/period1/asset_growth.png)를 보면 초기 자본이 지속적으로 증가하는 패턴을 확인할 수 있습니다.
+기간 1에서 hummusXBT는 100K USD에서 시작하여 단 222일 만에 1,264% 수익률을 달성했습니다. 이는 연율화 수익률로 환산하면 7,266%에 달하는 놀라운 성과입니다. [기간 1 자산 성장 그래프](analysis_results/hummusXBT/period1/asset_growth.png)를 보면 초기 자본이 지속적으로 증가하는 패턴을 확인할 수 있습니다.
 
-기간 2에서는 2M USD의 더 큰 자본으로 시작하여 244일 동안 99% 수익률을 달성했습니다. 원금 규모가 20배 증가했음에도 불구하고 여전히 높은 수익률을 유지하고 있습니다. [기간 2 자산 성장 그래프](analysis_results/period2/asset_growth.png)에서 확인할 수 있듯이, 더 큰 자본으로도 안정적인 성장세를 보여주고 있습니다.
+기간 2에서는 2M USD의 더 큰 자본으로 시작하여 244일 동안 99% 수익률을 달성했습니다. 원금 규모가 20배 증가했음에도 불구하고 여전히 높은 수익률을 유지하고 있습니다. [기간 2 자산 성장 그래프](analysis_results/hummusXBT/period2/asset_growth.png)에서 확인할 수 있듯이, 더 큰 자본으로도 안정적인 성장세를 보여주고 있습니다.
 
 ### 위험 관리
-특히 주목할 점은 MDD(Maximum Drawdown)가 기간 1의 -21.08%에서 기간 2에서는 -10.21%로 크게 개선되었다는 것입니다. 이는 자본 규모가 증가함에 따라 위험 관리 능력이 향상되었음을 보여줍니다. [낙폭 분석 그래프](analysis_results/overall/drawdown_by_periods.png)에서 각 기간의 낙폭 패턴을 비교할 수 있습니다.
+특히 주목할 점은 MDD(Maximum Drawdown)가 기간 1의 -21.08%에서 기간 2에서는 -10.21%로 크게 개선되었다는 것입니다. 이는 자본 규모가 증가함에 따라 위험 관리 능력이 향상되었음을 보여줍니다. [낙폭 분석 그래프](analysis_results/hummusXBT/overall/drawdown_by_periods.png)에서 각 기간의 낙폭 패턴을 비교할 수 있습니다.
 
 ### 거래 패턴
 hummusXBT는 총 2,704회의 거래를 통해 약 3억 8천만 달러의 거래 금액을 기록했습니다. 기간 1에서는 평균 107K USD 규모의 거래를, 기간 2에서는 평균 344K USD 규모의 거래를 진행했습니다. 이는 자본 규모에 따라 거래 크기를 적절히 조정하는 능력을 보여줍니다.
 
-[심볼 분석 그래프](analysis_results/overall/symbol_analysis.png)와 [방향별 분석 그래프](analysis_results/overall/direction_analysis.png)를 통해 hummusXBT의 거래 패턴을 더 자세히 확인할 수 있습니다.
+[심볼 분석 그래프](analysis_results/hummusXBT/overall/symbol_analysis.png)와 [방향별 분석 그래프](analysis_results/hummusXBT/overall/direction_analysis.png)를 통해 hummusXBT의 거래 패턴을 더 자세히 확인할 수 있습니다.
 
 ### 슬리피지 영향 분석
 거래 실행 시 발생하는 슬리피지(0.05%, 0.1%, 0.15%)가 트레이더의 성과에 미치는 영향을 분석했습니다. 분석 결과, 슬리피지는 특히 기간 1에서 큰 영향을 미치는 것으로 나타났습니다.
@@ -63,7 +63,7 @@ hummusXBT는 총 2,704회의 거래를 통해 약 3억 8천만 달러의 거래 
 - **0.10% 슬리피지 적용 시**: 85.07% (차이: -14.04%)
 - **0.15% 슬리피지 적용 시**: 78.05% (차이: -21.05%)
 
-이 결과는 작은 자본으로 시작할 때(기간 1)는 슬리피지의 영향이 매우 크지만, 자본 규모가 커질수록(기간 2) 그 영향이 상대적으로 감소함을 보여줍니다. [슬리피지 영향 분석 그래프](analysis_results/slippage_analysis/period_1_asset_growth_comparison.png)에서 자세한 비교를 확인할 수 있습니다.
+이 결과는 작은 자본으로 시작할 때(기간 1)는 슬리피지의 영향이 매우 크지만, 자본 규모가 커질수록(기간 2) 그 영향이 상대적으로 감소함을 보여줍니다. [슬리피지 영향 분석 그래프](analysis_results/hummusXBT/slippage_analysis/period_1_asset_growth_comparison.png)에서 자세한 비교를 확인할 수 있습니다.
 
 ## 슬리피지 영향에 대한 실용적 의미
 슬리피지 분석 결과는 hummusXBT 트레이더의 전략을 카피 트레이딩할 때 중요한 시사점을 제공합니다:
@@ -82,9 +82,9 @@ hummusXBT는 2023년 11월부터 시작된 어려운 시장 환경에서도 탁�
 ## 분석 결과 파일
 모든 분석 결과는 `analysis_results` 폴더에서 확인할 수 있습니다:
 
-- **전체 기간 분석**: `analysis_results/overall/`
-- **기간 1 분석**: `analysis_results/period1/`
-- **기간 2 분석**: `analysis_results/period2/`
+- **전체 기간 분석**: `analysis_results/hummusXBT/overall/`
+- **기간 1 분석**: `analysis_results/hummusXBT/period1/`
+- **기간 2 분석**: `analysis_results/hummusXBT/period2/`
 
 ## 실행 방법
 전체 분석을 실행하려면 다음 명령어를 사용하세요:
