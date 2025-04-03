@@ -22,9 +22,35 @@ PERIOD_SPLIT_DATE = datetime(2024, 6, 15)  # 이 날짜는 데이터를 보고 �
 
 # 결과 저장 경로
 RESULT_DIR = "analysis_results"
-PERIOD1_DIR = os.path.join(RESULT_DIR, "period1")
-PERIOD2_DIR = os.path.join(RESULT_DIR, "period2")
-OVERALL_DIR = os.path.join(RESULT_DIR, "overall")
+
+# 트레이더별 결과 디렉토리 경로 반환 함수
+def get_trader_result_dirs(trader_id=None):
+    """트레이더 ID에 따른 결과 디렉토리 경로 반환"""
+    if trader_id:
+        # 트레이더 설정 가져오기
+        from trader_config import get_trader
+        trader = get_trader(trader_id)
+        use_periods = trader.get('use_periods', True)  # 기본값은 기간 구분 사용
+        
+        trader_dir = os.path.join(RESULT_DIR, trader_id)
+        overall_dir = os.path.join(trader_dir, "overall")
+        
+        # 기간 구분이 있는 트레이더만 period1, period2 디렉토리 경로 반환
+        if use_periods:
+            period1_dir = os.path.join(trader_dir, "period1")
+            period2_dir = os.path.join(trader_dir, "period2")
+        else:
+            # 기간 구분이 없는 트레이더는 period1, period2 디렉토리 경로를 None으로 반환
+            period1_dir = None
+            period2_dir = None
+    else:
+        # 기본값 (하위 호환성 유지)
+        trader_dir = RESULT_DIR
+        period1_dir = os.path.join(RESULT_DIR, "period1")
+        period2_dir = os.path.join(RESULT_DIR, "period2")
+        overall_dir = os.path.join(RESULT_DIR, "overall")
+    
+    return trader_dir, period1_dir, period2_dir, overall_dir
 
 def parse_datetime(dt_str):
     """UTC 시간 문자열을 datetime 객체로 변환"""
@@ -90,8 +116,20 @@ def calculate_annualized_return(initial_capital, final_capital, start_date, end_
     
     return annualized_return
 
-def analyze_pnl_by_periods(csv_file):
+def analyze_pnl_by_periods(csv_file, period_split_date=None, trader_id=None):
     """트레이더의 PnL 분석 (기간별)"""
+    # 기간 구분 날짜가 없으면 기본값 사용
+    if period_split_date is None:
+        period_split_date = PERIOD_SPLIT_DATE
+    
+    # 트레이더 설정 가져오기
+    from trader_config import get_trader
+    trader = get_trader(trader_id)
+    use_periods = trader.get('use_periods', True)  # 기본값은 기간 구분 사용
+        
+    # 트레이더별 결과 디렉토리 가져오기
+    trader_dir, period1_dir, period2_dir, overall_dir = get_trader_result_dirs(trader_id)
+    
     # CSV 파일 읽기
     df = pd.read_csv(csv_file)
     
@@ -122,7 +160,7 @@ def analyze_pnl_by_periods(csv_file):
     
     # 기간 구분
     df_sorted['Period'] = df_sorted['Close_Time_UTC'].apply(
-        lambda x: 1 if x < PERIOD_SPLIT_DATE else 2
+        lambda x: 1 if x < period_split_date else 2
     )
     
     # 기간별 데이터 분리
@@ -138,26 +176,145 @@ def analyze_pnl_by_periods(csv_file):
         initial_pnl_period2 = 0
         df_period2.loc[:, 'Period_Cumulative_PnL'] = df_period2['PnL_Numeric'].cumsum() - initial_pnl_period2
     
-    # 결과 저장
-    result_file_overall = os.path.join(OVERALL_DIR, "analyzed_data.csv")
-    result_file_period1 = os.path.join(PERIOD1_DIR, "analyzed_data.csv")
-    result_file_period2 = os.path.join(PERIOD2_DIR, "analyzed_data.csv")
+    # 결과 디렉토리 생성
+    os.makedirs(overall_dir, exist_ok=True)
     
-    df_sorted.to_csv(result_file_overall, index=False)
-    if not df_period1.empty:
-        df_period1.to_csv(result_file_period1, index=False)
-    if not df_period2.empty:
-        df_period2.to_csv(result_file_period2, index=False)
-    
-    print(f"전체 분석 결과가 {result_file_overall}에 저장되었습니다.")
-    print(f"기간 1 분석 결과가 {result_file_period1}에 저장되었습니다.")
-    print(f"기간 2 분석 결과가 {result_file_period2}에 저장되었습니다.")
+    # 기간 구분이 있는 트레이더인 경우에만 period1, period2 디렉토리 생성
+    if use_periods and period1_dir and period2_dir:
+        os.makedirs(period1_dir, exist_ok=True)
+        os.makedirs(period2_dir, exist_ok=True)
+        
+        # 결과 저장
+        result_file_overall = os.path.join(overall_dir, "analyzed_data.csv")
+        result_file_period1 = os.path.join(period1_dir, "analyzed_data.csv")
+        result_file_period2 = os.path.join(period2_dir, "analyzed_data.csv")
+        
+        df_sorted.to_csv(result_file_overall, index=False)
+        if not df_period1.empty:
+            df_period1.to_csv(result_file_period1, index=False)
+        if not df_period2.empty:
+            df_period2.to_csv(result_file_period2, index=False)
+        
+        print(f"전체 분석 결과가 {result_file_overall}에 저장되었습니다.")
+        if not df_period1.empty:
+            print(f"기간 1 분석 결과가 {result_file_period1}에 저장되었습니다.")
+        if not df_period2.empty:
+            print(f"기간 2 분석 결과가 {result_file_period2}에 저장되었습니다.")
+    else:
+        # 기간 구분이 없는 트레이더인 경우
+        result_file_overall = os.path.join(overall_dir, "analyzed_data.csv")
+        df_sorted.to_csv(result_file_overall, index=False)
+        print(f"분석 결과가 {result_file_overall}에 저장되었습니다.")
     
     return df_sorted, df_period1, df_period2
+
+
+def analyze_pnl_without_periods(csv_file, trader_id=None):
+    """기간 구분 없이 트레이더의 PnL 분석"""
+    # 트레이더별 결과 디렉토리 가져오기
+    trader_dir, period1_dir, period2_dir, overall_dir = get_trader_result_dirs(trader_id)
+    
+    # 결과 디렉토리 생성
+    os.makedirs(overall_dir, exist_ok=True)
+    
+    # CSV 파일 읽기
+    df = pd.read_csv(csv_file)
+    
+    # 날짜 파싱 및 KST로 변환
+    df['Open_Time_UTC'] = df['Open Time'].apply(parse_datetime)
+    df['Close_Time_UTC'] = df['Close Time'].apply(parse_datetime)
+    df['Open_Time_KST'] = df['Open_Time_UTC'].apply(convert_to_kst)
+    df['Close_Time_KST'] = df['Close_Time_UTC'].apply(convert_to_kst)
+    
+    # 문자열 형태의 KST 시간 추가
+    df['Open_Time_KST_Str'] = df['Open_Time_KST'].apply(format_kst_time)
+    df['Close_Time_KST_Str'] = df['Close_Time_KST'].apply(format_kst_time)
+    
+    # PnL 숫자로 변환
+    df['PnL_Value'] = df['Realized PnL'].apply(lambda x: parse_pnl(x))
+    df['PnL_Sign'] = df['Realized PnL'].apply(lambda x: -1 if '-' in x else 1)
+    df['PnL_Numeric'] = df['PnL_Value'] * df['PnL_Sign']
+    
+    # 거래 금액 숫자로 변환
+    df['Size_USDT_Numeric'] = df['Max Size USDT'].apply(parse_size_usdt)
+    df['Size_USDT_Abs'] = df['Size_USDT_Numeric'].abs()
+    
+    # 시간순 정렬 (오픈 시간 기준)
+    df_sorted = df.sort_values('Open_Time_UTC').reset_index(drop=True)
+    
+    # 누적 PnL 계산
+    df_sorted['Cumulative_PnL'] = df_sorted['PnL_Numeric'].cumsum()
+    df_sorted['Period_Cumulative_PnL'] = df_sorted['Cumulative_PnL']  # 기간 구분 없이 동일한 값 사용
+    
+    # 결과 저장
+    result_file_overall = os.path.join(overall_dir, "analyzed_data.csv")
+    df_sorted.to_csv(result_file_overall, index=False)
+    print(f"전체 분석 결과가 {result_file_overall}에 저장되었습니다.")
+    
+    return df_sorted
 
 def calculate_total_trading_volume(df):
     """총 거래 금액 계산"""
     return df['Size_USDT_Abs'].sum()
+
+def calculate_performance_metrics_without_capital(df_period, period_name):
+    """원금 정보 없이 성과 지표 계산"""
+    if df_period.empty:
+        print(f"{period_name}에 해당하는 데이터가 없습니다.")
+        return {}
+    
+    # 총 수익 계산
+    total_pnl = df_period['PnL_Numeric'].sum()
+    
+    # 총 거래 금액
+    total_volume = calculate_total_trading_volume(df_period)
+    
+    # 시작일과 종료일
+    start_date = df_period['Close_Time_UTC'].min()
+    end_date = df_period['Close_Time_UTC'].max()
+    
+    # 기간 (일)
+    days = (end_date - start_date).days if start_date and end_date else 0
+    
+    # 일별 수익 계산을 위한 데이터 준비
+    df_period.loc[:, 'Close_Date'] = df_period['Close_Time_UTC'].apply(lambda x: x.date() if x is not None else None)
+    daily_pnl = df_period.groupby('Close_Date')['PnL_Numeric'].sum().reset_index()
+    
+    # 수익/손실 거래 비율
+    win_trades = df_period[df_period['PnL_Numeric'] > 0]
+    loss_trades = df_period[df_period['PnL_Numeric'] < 0]
+    win_rate = len(win_trades) / len(df_period) * 100 if len(df_period) > 0 else 0
+    
+    # 평균 수익/손실
+    avg_win = win_trades['PnL_Numeric'].mean() if len(win_trades) > 0 else 0
+    avg_loss = loss_trades['PnL_Numeric'].mean() if len(loss_trades) > 0 else 0
+    
+    # 일평균 수익
+    daily_avg_pnl = total_pnl / days if days > 0 else 0
+    
+    # 심볼별 수익
+    symbol_pnl = df_period.groupby('Symbol')['PnL_Numeric'].sum()
+    top_symbols = symbol_pnl.nlargest(5)
+    bottom_symbols = symbol_pnl.nsmallest(5)
+    
+    # 방향별 수익
+    direction_pnl = df_period.groupby('Direction')['PnL_Numeric'].sum()
+    
+    return {
+        'Period': period_name,
+        'Total PnL': total_pnl,
+        'Total Volume': total_volume,
+        'Start Date': start_date,
+        'End Date': end_date,
+        'Trading Days': days,
+        'Daily Avg PnL': daily_avg_pnl,
+        'Win Rate (%)': win_rate,
+        'Avg Win': avg_win,
+        'Avg Loss': avg_loss,
+        'Top Symbols': top_symbols,
+        'Bottom Symbols': bottom_symbols,
+        'Direction PnL': direction_pnl
+    }
 
 def calculate_performance_metrics(df_period, initial_capital, period_name):
     """성과 지표 계산"""
@@ -244,8 +401,11 @@ def calculate_performance_metrics(df_period, initial_capital, period_name):
     
     return metrics
 
-def print_performance_comparison(metrics_period1, metrics_period2):
+def print_performance_comparison(metrics_period1, metrics_period2, trader_id=None):
     """성과 지표 비교 출력"""
+    # 트레이더별 결과 디렉토리 가져오기
+    result_dir, period1_dir, period2_dir, overall_dir = get_trader_result_dirs(trader_id)
+    
     print("\n===== 기간별 성과 비교 =====")
     
     # 데이터프레임으로 변환하여 출력
@@ -258,14 +418,16 @@ def print_performance_comparison(metrics_period1, metrics_period2):
     print(metrics_df)
     
     # 결과를 텍스트 파일로 저장
-    with open(os.path.join(OVERALL_DIR, 'performance_comparison.txt'), 'w', encoding='utf-8') as f:
+    with open(os.path.join(overall_dir, 'performance_comparison.txt'), 'w', encoding='utf-8') as f:
         f.write("===== 기간별 성과 비교 =====\n\n")
         f.write(metrics_df.to_string(index=False))
     
-    print(f"\n성과 비교가 {os.path.join(OVERALL_DIR, 'performance_comparison.txt')}에 저장되었습니다.")
+    print(f"\n성과 비교가 {os.path.join(overall_dir, 'performance_comparison.txt')}에 저장되었습니다.")
 
-def evaluate_trader_skill(metrics_period1, metrics_period2):
+def evaluate_trader_skill(metrics_period1, metrics_period2, trader_id=None):
     """트레이더 실력 평가"""
+    # 트레이더별 결과 디렉토리 가져오기
+    result_dir, period1_dir, period2_dir, overall_dir = get_trader_result_dirs(trader_id)
     # 평가 기준
     evaluation_points = 0
     max_points = 10
@@ -365,7 +527,7 @@ def evaluate_trader_skill(metrics_period1, metrics_period2):
         evaluation_result["종합 의견"] = "이 트레이더는 추가적인 개선이 필요한 것으로 보입니다. 위험 관리와 수익률 측면에서 더 나은 결과를 위한 전략 조정이 권장됩니다."
     
     # 결과 저장
-    with open(os.path.join(OVERALL_DIR, 'trader_evaluation.txt'), 'w', encoding='utf-8') as f:
+    with open(os.path.join(overall_dir, 'trader_evaluation.txt'), 'w', encoding='utf-8') as f:
         f.write("===== 트레이더 실력 평가 =====\n\n")
         f.write(f"종합 점수: {evaluation_result['점수']}\n\n")
         f.write("세부 평가:\n")
@@ -373,6 +535,6 @@ def evaluate_trader_skill(metrics_period1, metrics_period2):
             f.write(f"- {comment}\n")
         f.write(f"\n종합 의견:\n{evaluation_result['종합 의견']}")
     
-    print(f"\n트레이더 평가가 {os.path.join(OVERALL_DIR, 'trader_evaluation.txt')}에 저장되었습니다.")
+    print(f"\n트레이더 평가가 {os.path.join(overall_dir, 'trader_evaluation.txt')}에 저장되었습니다.")
     
     return evaluation_result

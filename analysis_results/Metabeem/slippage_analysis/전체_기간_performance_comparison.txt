@@ -1,0 +1,9 @@
+===== 전체 기간 Slippage Impact Analysis =====
+
+Metric               Original        Slippage 0.05%  Slippage 0.1%   Slippage 0.15% 
+Total PnL (USD)      $3,474,043.42   $1,302,822.99   $-868,397.44    $-3,039,617.87 
+Daily Return (USD)   $4,977.14       $1,866.51       $-1,244.12      $-4,354.75     
+Win Rate (%)         50.63%          44.08%          38.54%          34.26%         
+Avg Win (USD)        $81,955.34      $88,020.27      $94,421.32      $99,996.69     
+Avg Loss (USD)       $-66,321.33     $-63,516.78     $-62,765.82     $-63,751.60    
+Trading Days         698             698             698             698            

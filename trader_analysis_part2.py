@@ -8,13 +8,17 @@ import seaborn as sns
 import os
 from trader_analysis_part1 import *
 
-def plot_pnl_by_periods(df, df_period1, df_period2):
+def plot_pnl_by_periods(df, df_period1, df_period2, period_split_date=None, trader_id=None):
     """기간별 PnL 그래프 생성"""
+    # 트레이더별 결과 디렉토리 가져오기
+    result_dir, period1_dir, period2_dir, overall_dir = get_trader_result_dirs(trader_id)
+    
     # 전체 기간 그래프
     plt.figure(figsize=(15, 10))
     plt.subplot(3, 1, 1)
     plt.plot(df['Close_Time_KST'], df['Cumulative_PnL'], marker='o', linestyle='-', color='blue')
-    plt.axvline(x=convert_to_kst(PERIOD_SPLIT_DATE), color='red', linestyle='--', label='원금 변경 시점')
+    if period_split_date:
+        plt.axvline(x=convert_to_kst(period_split_date), color='red', linestyle='--', label='원금 변경 시점')
     plt.title('전체 기간 누적 PnL (한국 시간 기준)', fontsize=16)
     plt.ylabel('누적 PnL (USDT)', fontsize=14)
     plt.grid(True, alpha=0.3)
@@ -27,7 +31,7 @@ def plot_pnl_by_periods(df, df_period1, df_period2):
         plt.subplot(3, 1, 2)
         plt.plot(df_period1['Close_Time_KST'], df_period1['Period_Cumulative_PnL'], 
                 marker='o', linestyle='-', color='green')
-        plt.title(f'기간 1 누적 PnL (원금: {INITIAL_CAPITAL_PERIOD1:,} USD)', fontsize=16)
+        plt.title(f'기간 1 누적 PnL', fontsize=16)
         plt.ylabel('누적 PnL (USDT)', fontsize=14)
         plt.grid(True, alpha=0.3)
         plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
@@ -38,18 +42,20 @@ def plot_pnl_by_periods(df, df_period1, df_period2):
         plt.subplot(3, 1, 3)
         plt.plot(df_period2['Close_Time_KST'], df_period2['Period_Cumulative_PnL'], 
                 marker='o', linestyle='-', color='purple')
-        plt.title(f'기간 2 누적 PnL (원금: {INITIAL_CAPITAL_PERIOD2:,} USD)', fontsize=16)
+        plt.title(f'기간 2 누적 PnL', fontsize=16)
         plt.ylabel('누적 PnL (USDT)', fontsize=14)
         plt.grid(True, alpha=0.3)
         plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
         plt.xticks(rotation=45)
     
     plt.tight_layout()
-    plt.savefig(os.path.join(OVERALL_DIR, 'pnl_analysis_by_periods.png'), dpi=300, bbox_inches='tight')
-    print(f"기간별 PnL 그래프가 {os.path.join(OVERALL_DIR, 'pnl_analysis_by_periods.png')}에 저장되었습니다.")
+    plt.savefig(os.path.join(overall_dir, 'pnl_analysis_by_periods.png'), dpi=300, bbox_inches='tight')
+    print(f"기간별 PnL 그래프가 {os.path.join(overall_dir, 'pnl_analysis_by_periods.png')}에 저장되었습니다.")
 
-def plot_drawdown_by_periods(df_period1, df_period2):
+def plot_drawdown_by_periods(df_period1, df_period2, trader_id=None, initial_capital_period1=100000, initial_capital_period2=2000000):
     """기간별 낙폭(Drawdown) 그래프 생성"""
+    # 트레이더별 결과 디렉토리 가져오기
+    result_dir, period1_dir, period2_dir, overall_dir = get_trader_result_dirs(trader_id)
     plt.figure(figsize=(15, 10))
     
     # 기간 1 낙폭 그래프
@@ -58,11 +64,11 @@ def plot_drawdown_by_periods(df_period1, df_period2):
         df_period1_copy = df_period1.copy()
         df_period1_copy.loc[:, 'Close_Date'] = df_period1_copy['Close_Time_UTC'].apply(lambda x: x.date() if x is not None else None)
         daily_pnl1 = df_period1_copy.groupby('Close_Date')['PnL_Numeric'].sum().reset_index()
-        daily_pnl1['Daily_Return'] = daily_pnl1['PnL_Numeric'] / INITIAL_CAPITAL_PERIOD1
+        daily_pnl1['Daily_Return'] = daily_pnl1['PnL_Numeric'] / initial_capital_period1
         
         # 자산 가치 계산 (초기 자산 + 누적 PnL)
         daily_pnl1['Cumulative_PnL'] = daily_pnl1['PnL_Numeric'].cumsum()
-        daily_pnl1['Asset_Value'] = daily_pnl1['Cumulative_PnL'] + INITIAL_CAPITAL_PERIOD1
+        daily_pnl1['Asset_Value'] = daily_pnl1['Cumulative_PnL'] + initial_capital_period1
         
         # 올바른 MDD 계산
         peak1 = daily_pnl1['Asset_Value'].cummax()
@@ -79,8 +85,8 @@ def plot_drawdown_by_periods(df_period1, df_period2):
         plt.xticks(rotation=45)
         
         # 결과 저장 (기간 1)
-        plt.savefig(os.path.join(PERIOD1_DIR, 'drawdown_analysis.png'), dpi=300, bbox_inches='tight')
-        print(f"기간 1 낙폭 그래프가 {os.path.join(PERIOD1_DIR, 'drawdown_analysis.png')}에 저장되었습니다.")
+        plt.savefig(os.path.join(period1_dir, 'drawdown_analysis.png'), dpi=300, bbox_inches='tight')
+        print(f"기간 1 낙폭 그래프가 {os.path.join(period1_dir, 'drawdown_analysis.png')}에 저장되었습니다.")
     
     # 기간 2 낙폭 그래프
     if not df_period2.empty:
@@ -88,11 +94,11 @@ def plot_drawdown_by_periods(df_period1, df_period2):
         df_period2_copy = df_period2.copy()
         df_period2_copy.loc[:, 'Close_Date'] = df_period2_copy['Close_Time_UTC'].apply(lambda x: x.date() if x is not None else None)
         daily_pnl2 = df_period2_copy.groupby('Close_Date')['PnL_Numeric'].sum().reset_index()
-        daily_pnl2['Daily_Return'] = daily_pnl2['PnL_Numeric'] / INITIAL_CAPITAL_PERIOD2
+        daily_pnl2['Daily_Return'] = daily_pnl2['PnL_Numeric'] / initial_capital_period2
         
         # 자산 가치 계산 (초기 자산 + 누적 PnL)
         daily_pnl2['Cumulative_PnL'] = daily_pnl2['PnL_Numeric'].cumsum()
-        daily_pnl2['Asset_Value'] = daily_pnl2['Cumulative_PnL'] + INITIAL_CAPITAL_PERIOD2
+        daily_pnl2['Asset_Value'] = daily_pnl2['Cumulative_PnL'] + initial_capital_period2
         
         # 올바른 MDD 계산
         peak2 = daily_pnl2['Asset_Value'].cummax()
@@ -109,15 +115,17 @@ def plot_drawdown_by_periods(df_period1, df_period2):
         plt.xticks(rotation=45)
         
         # 결과 저장 (기간 2)
-        plt.savefig(os.path.join(PERIOD2_DIR, 'drawdown_analysis.png'), dpi=300, bbox_inches='tight')
-        print(f"기간 2 낙폭 그래프가 {os.path.join(PERIOD2_DIR, 'drawdown_analysis.png')}에 저장되었습니다.")
+        plt.savefig(os.path.join(period2_dir, 'drawdown_analysis.png'), dpi=300, bbox_inches='tight')
+        print(f"기간 2 낙폭 그래프가 {os.path.join(period2_dir, 'drawdown_analysis.png')}에 저장되었습니다.")
     
     plt.tight_layout()
-    plt.savefig(os.path.join(OVERALL_DIR, 'drawdown_by_periods.png'), dpi=300, bbox_inches='tight')
-    print(f"전체 낙폭 그래프가 {os.path.join(OVERALL_DIR, 'drawdown_by_periods.png')}에 저장되었습니다.")
+    plt.savefig(os.path.join(overall_dir, 'drawdown_by_periods.png'), dpi=300, bbox_inches='tight')
+    print(f"전체 낙폭 그래프가 {os.path.join(overall_dir, 'drawdown_by_periods.png')}에 저장되었습니다.")
 
-def plot_monthly_returns(df_period1, df_period2):
+def plot_monthly_returns(df_period1, df_period2, trader_id=None, initial_capital_period1=100000, initial_capital_period2=2000000):
     """월별 수익률 히트맵 생성"""
+    # 트레이더별 결과 디렉토리 가져오기
+    result_dir, period1_dir, period2_dir, overall_dir = get_trader_result_dirs(trader_id)
     # 기간 1 월별 수익률
     if not df_period1.empty:
         plt.figure(figsize=(12, 8))
@@ -128,18 +136,18 @@ def plot_monthly_returns(df_period1, df_period2):
         
         # 월별 수익률 계산
         monthly_returns1 = df_period1_copy.groupby(['Year', 'Month'])['PnL_Numeric'].sum().reset_index()
-        monthly_returns1['Monthly_Return'] = monthly_returns1['PnL_Numeric'] / INITIAL_CAPITAL_PERIOD1 * 100
+        monthly_returns1['Monthly_Return'] = monthly_returns1['PnL_Numeric'] / initial_capital_period1 * 100
         
         # 피봇 테이블 생성
         pivot1 = monthly_returns1.pivot(index='Year', columns='Month', values='Monthly_Return')
         
         # 히트맵 그리기
         sns.heatmap(pivot1, annot=True, cmap='RdYlGn', center=0, fmt='.2f')
-        plt.title(f'기간 1 월별 수익률 (%) (원금: {INITIAL_CAPITAL_PERIOD1:,} USD)', fontsize=16)
+        plt.title(f'기간 1 월별 수익률 (%)', fontsize=16)
         
         plt.tight_layout()
-        plt.savefig(os.path.join(PERIOD1_DIR, 'monthly_returns.png'), dpi=300, bbox_inches='tight')
-        print(f"기간 1 월별 수익률 히트맵이 {os.path.join(PERIOD1_DIR, 'monthly_returns.png')}에 저장되었습니다.")
+        plt.savefig(os.path.join(period1_dir, 'monthly_returns.png'), dpi=300, bbox_inches='tight')
+        print(f"기간 1 월별 수익률 히트맵이 {os.path.join(period1_dir, 'monthly_returns.png')}에 저장되었습니다.")
     
     # 기간 2 월별 수익률
     if not df_period2.empty:
@@ -151,18 +159,18 @@ def plot_monthly_returns(df_period1, df_period2):
         
         # 월별 수익률 계산
         monthly_returns2 = df_period2_copy.groupby(['Year', 'Month'])['PnL_Numeric'].sum().reset_index()
-        monthly_returns2['Monthly_Return'] = monthly_returns2['PnL_Numeric'] / INITIAL_CAPITAL_PERIOD2 * 100
+        monthly_returns2['Monthly_Return'] = monthly_returns2['PnL_Numeric'] / initial_capital_period2 * 100
         
         # 피봇 테이블 생성
         pivot2 = monthly_returns2.pivot(index='Year', columns='Month', values='Monthly_Return')
         
         # 히트맵 그리기
         sns.heatmap(pivot2, annot=True, cmap='RdYlGn', center=0, fmt='.2f')
-        plt.title(f'기간 2 월별 수익률 (%) (원금: {INITIAL_CAPITAL_PERIOD2:,} USD)', fontsize=16)
+        plt.title(f'기간 2 월별 수익률 (%)', fontsize=16)
         
         plt.tight_layout()
-        plt.savefig(os.path.join(PERIOD2_DIR, 'monthly_returns.png'), dpi=300, bbox_inches='tight')
-        print(f"기간 2 월별 수익률 히트맵이 {os.path.join(PERIOD2_DIR, 'monthly_returns.png')}에 저장되었습니다.")
+        plt.savefig(os.path.join(period2_dir, 'monthly_returns.png'), dpi=300, bbox_inches='tight')
+        print(f"기간 2 월별 수익률 히트맵이 {os.path.join(period2_dir, 'monthly_returns.png')}에 저장되었습니다.")
 
 def plot_symbol_analysis(df_period, period_name, output_dir):
     """심볼별 분석 그래프 생성"""
@@ -374,33 +382,127 @@ def plot_holding_period_analysis(df_period, period_name, output_dir):
     plt.savefig(os.path.join(output_dir, 'holding_period_analysis.png'), dpi=300, bbox_inches='tight')
     print(f"{period_name} 보유 기간 분석 그래프가 {os.path.join(output_dir, 'holding_period_analysis.png')}에 저장되었습니다.")
 
-def generate_all_visualizations(df, df_period1, df_period2):
+def generate_all_visualizations(df, df_period1, df_period2, trader_id=None):
     """모든 시각화 생성"""
+    # 트레이더별 결과 디렉토리 가져오기
+    result_dir, period1_dir, period2_dir, overall_dir = get_trader_result_dirs(trader_id)
+    
+    # 트레이더 정보 가져오기
+    from trader_config import get_trader
+    trader = get_trader(trader_id)
+    initial_capital_period1 = trader.get('initial_capital_period1', 100000)
+    initial_capital_period2 = trader.get('initial_capital_period2', 2000000)
+    period_split_date_str = trader.get('period_split_date', None)
+    
+    # 기간 구분 날짜 문자열을 datetime 객체로 변환
+    period_split_date = None
+    if period_split_date_str:
+        try:
+            period_split_date = datetime.strptime(period_split_date_str, '%Y-%m-%d')
+        except:
+            period_split_date = None
+    
     # 기간별 PnL 그래프
-    plot_pnl_by_periods(df, df_period1, df_period2)
+    plot_pnl_by_periods(df, df_period1, df_period2, period_split_date, trader_id)
     
     # 낙폭 그래프
-    plot_drawdown_by_periods(df_period1, df_period2)
+    plot_drawdown_by_periods(df_period1, df_period2, trader_id, initial_capital_period1, initial_capital_period2)
     
     # 월별 수익률 히트맵
-    plot_monthly_returns(df_period1, df_period2)
+    plot_monthly_returns(df_period1, df_period2, trader_id, initial_capital_period1, initial_capital_period2)
     
     # 기간 1 추가 분석
     if not df_period1.empty:
-        plot_symbol_analysis(df_period1, "기간 1", PERIOD1_DIR)
-        plot_direction_analysis(df_period1, "기간 1", PERIOD1_DIR)
-        plot_trade_size_distribution(df_period1, "기간 1", PERIOD1_DIR)
-        plot_holding_period_analysis(df_period1, "기간 1", PERIOD1_DIR)
+        plot_symbol_analysis(df_period1, "기간 1", period1_dir)
+        plot_direction_analysis(df_period1, "기간 1", period1_dir)
+        plot_trade_size_distribution(df_period1, "기간 1", period1_dir)
+        plot_holding_period_analysis(df_period1, "기간 1", period1_dir)
     
     # 기간 2 추가 분석
     if not df_period2.empty:
-        plot_symbol_analysis(df_period2, "기간 2", PERIOD2_DIR)
-        plot_direction_analysis(df_period2, "기간 2", PERIOD2_DIR)
-        plot_trade_size_distribution(df_period2, "기간 2", PERIOD2_DIR)
-        plot_holding_period_analysis(df_period2, "기간 2", PERIOD2_DIR)
+        plot_symbol_analysis(df_period2, "기간 2", period2_dir)
+        plot_direction_analysis(df_period2, "기간 2", period2_dir)
+        plot_trade_size_distribution(df_period2, "기간 2", period2_dir)
+        plot_holding_period_analysis(df_period2, "기간 2", period2_dir)
     
     # 전체 기간 추가 분석
-    plot_symbol_analysis(df, "전체 기간", OVERALL_DIR)
-    plot_direction_analysis(df, "전체 기간", OVERALL_DIR)
-    plot_trade_size_distribution(df, "전체 기간", OVERALL_DIR)
-    plot_holding_period_analysis(df, "전체 기간", OVERALL_DIR)
+    plot_symbol_analysis(df, "전체 기간", overall_dir)
+    plot_direction_analysis(df, "전체 기간", overall_dir)
+    plot_trade_size_distribution(df, "전체 기간", overall_dir)
+    plot_holding_period_analysis(df, "전체 기간", overall_dir)
+
+
+def plot_pnl_without_periods(df, output_dir):
+    """기간 구분 없는 트레이더의 PnL 그래프 생성"""
+    plt.figure(figsize=(15, 10))
+    
+    # 누적 PnL 그래프
+    plt.subplot(2, 1, 1)
+    plt.plot(df['Close_Time_KST'], df['Cumulative_PnL'], marker='o', linestyle='-', color='blue')
+    plt.title('누적 PnL (한국 시간 기준)', fontsize=16)
+    plt.ylabel('누적 PnL (USDT)', fontsize=14)
+    plt.grid(True, alpha=0.3)
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    plt.xticks(rotation=45)
+    
+    # 일별 PnL 그래프
+    plt.subplot(2, 1, 2)
+    df['Close_Date'] = df['Close_Time_KST'].dt.date
+    daily_pnl = df.groupby('Close_Date')['PnL_Numeric'].sum().reset_index()
+    daily_pnl['Close_Date'] = pd.to_datetime(daily_pnl['Close_Date'])
+    
+    plt.bar(daily_pnl['Close_Date'], daily_pnl['PnL_Numeric'], color='green')
+    plt.title('일별 PnL', fontsize=16)
+    plt.ylabel('PnL (USDT)', fontsize=14)
+    plt.grid(True, alpha=0.3)
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    plt.xticks(rotation=45)
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'pnl_analysis.png'), dpi=300, bbox_inches='tight')
+    print(f"PnL 그래프가 {os.path.join(output_dir, 'pnl_analysis.png')}에 저장되었습니다.")
+
+
+def generate_visualizations_without_periods(df, trader_id=None):
+    """기간 구분이 없는 트레이더를 위한 시각화 생성"""
+    # 트레이더별 결과 디렉토리 가져오기
+    result_dir, period1_dir, period2_dir, overall_dir = get_trader_result_dirs(trader_id)
+    # PnL 그래프
+    plot_pnl_without_periods(df, overall_dir)
+    
+    # 심볼별 분석
+    plot_symbol_analysis(df, "전체 기간", overall_dir)
+    
+    # 방향별 분석
+    plot_direction_analysis(df, "전체 기간", overall_dir)
+    
+    # 거래 크기 분포
+    plot_trade_size_distribution(df, "전체 기간", overall_dir)
+    
+    # 보유 기간 분석
+    plot_holding_period_analysis(df, "전체 기간", overall_dir)
+    
+    # 월별 수익 분석
+    try:
+        # 월별 수익 계산
+        df['Year_Month'] = df['Close_Time_KST'].dt.to_period('M')
+        monthly_returns = df.groupby('Year_Month')['PnL_Numeric'].sum().reset_index()
+        monthly_returns['Year'] = monthly_returns['Year_Month'].dt.year
+        monthly_returns['Month'] = monthly_returns['Year_Month'].dt.month
+        
+        # 히트맵용 데이터 준비
+        pivot_table = monthly_returns.pivot_table(index='Year', columns='Month', values='PnL_Numeric')
+        
+        # 히트맵 생성
+        plt.figure(figsize=(12, 8))
+        sns.heatmap(pivot_table, annot=True, cmap='RdYlGn', fmt='.1f', linewidths=.5)
+        plt.title('월별 수익 (USDT)', fontsize=16)
+        plt.ylabel('년도', fontsize=14)
+        plt.xlabel('월', fontsize=14)
+        
+        # 저장
+        plt.tight_layout()
+        plt.savefig(os.path.join(overall_dir, 'monthly_returns.png'), dpi=300, bbox_inches='tight')
+        print(f"월별 수익 히트맵이 {os.path.join(overall_dir, 'monthly_returns.png')}에 저장되었습니다.")
+    except Exception as e:
+        print(f"월별 수익 분석 중 오류 발생: {str(e)}")

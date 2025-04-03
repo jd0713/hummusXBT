@@ -205,25 +205,169 @@ def plot_daily_asset_growth(df_period1, df_period2):
         plt.savefig(os.path.join(PERIOD2_DIR, 'daily_asset_growth.png'), dpi=300, bbox_inches='tight')
         print(f"기간 2 일별 자산 성장 그래프가 {os.path.join(PERIOD2_DIR, 'daily_asset_growth.png')}에 저장되었습니다.")
 
-if __name__ == "__main__":
-    # CSV 파일 경로
-    csv_file = "closed_positions_20250403_073826.csv"
+def plot_asset_growth_without_periods(df, initial_capital=100000):
+    """기간 구분이 없는 트레이더의 자산 성장 그래프 생성"""
+    plt.figure(figsize=(15, 10))
     
-    # 폴더 생성 확인
-    for directory in [RESULT_DIR, PERIOD1_DIR, PERIOD2_DIR, OVERALL_DIR]:
+    # 자산 가치 계산
+    if initial_capital is not None:
+        asset_values = df['Cumulative_PnL'] + initial_capital
+        title_suffix = f"(초기 원금: {initial_capital:,} USD)"
+    else:
+        # 원금 정보가 없는 경우 누적 PnL만 표시
+        asset_values = df['Cumulative_PnL']
+        title_suffix = "(원금 정보 없음)"
+    
+    # 자산 가치 그래프
+    plt.subplot(2, 1, 1)
+    plt.plot(df['Close_Time_KST'], asset_values, marker='o', linestyle='-', color='blue')
+    plt.title(f'자산 가치 변화 {title_suffix}', fontsize=16)
+    plt.ylabel('자산 가치 (USDT)', fontsize=14)
+    plt.grid(True, alpha=0.3)
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    plt.xticks(rotation=45)
+    
+    # 일별 자산 변화
+    plt.subplot(2, 1, 2)
+    
+    # 일별 데이터 준비
+    df['Close_Date'] = df['Close_Time_KST'].dt.date
+    daily_pnl = df.groupby('Close_Date')['PnL_Numeric'].sum().reset_index()
+    daily_pnl['Close_Date'] = pd.to_datetime(daily_pnl['Close_Date'])
+    
+    # 일별 PnL 그래프
+    plt.bar(daily_pnl['Close_Date'], daily_pnl['PnL_Numeric'], color='green')
+    plt.title('일별 PnL', fontsize=16)
+    plt.ylabel('PnL (USDT)', fontsize=14)
+    plt.grid(True, alpha=0.3)
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    plt.xticks(rotation=45)
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(OVERALL_DIR, 'asset_growth.png'), dpi=300, bbox_inches='tight')
+    print(f"자산 성장 그래프가 {os.path.join(OVERALL_DIR, 'asset_growth.png')}에 저장되었습니다.")
+
+
+def generate_asset_growth_charts(trader_id=None, csv_file=None, output_dir=None):
+    """트레이더 ID와 CSV 파일을 기반으로 자산 성장 그래프 생성"""
+    from trader_config import get_trader, get_all_trader_ids
+    
+    # 트레이더 선택 또는 확인
+    if trader_id is None:
+        # 기본 트레이더 사용
+        trader_id = "hummusXBT"
+    
+    # 트레이더 정보 가져오기
+    trader = get_trader(trader_id)
+    trader_name = trader['name']
+    
+    # 트레이더 설정에 따라 분석 방식 결정
+    use_periods = trader.get('use_periods', True)  # 기본값은 기간 구분 사용
+    
+    # 결과 폴더 설정
+    global RESULT_DIR, PERIOD1_DIR, PERIOD2_DIR, OVERALL_DIR
+    
+    # 출력 디렉토리가 지정된 경우 사용
+    if output_dir:
+        RESULT_DIR = output_dir
+    else:
+        RESULT_DIR = f"analysis_results/{trader_id}"
+    
+    OVERALL_DIR = os.path.join(RESULT_DIR, "overall")
+    
+    # 기본 폴더 생성
+    for directory in [RESULT_DIR, OVERALL_DIR]:
         if not os.path.exists(directory):
             os.makedirs(directory)
             print(f"폴더 생성: {directory}")
     
-    print("\n===== 자산 성장 그래프 생성 시작 =====")
+    # 기간 구분이 있는 트레이더인 경우에만 period1, period2 디렉토리 생성
+    if use_periods:
+        PERIOD1_DIR = os.path.join(RESULT_DIR, "period1")
+        PERIOD2_DIR = os.path.join(RESULT_DIR, "period2")
+        
+        for directory in [PERIOD1_DIR, PERIOD2_DIR]:
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+                print(f"폴더 생성: {directory}")
+    else:
+        # 기간 구분이 없는 트레이더인 경우 None으로 설정
+        PERIOD1_DIR = None
+        PERIOD2_DIR = None
     
-    # PnL 분석 (기간별)
-    df, df_period1, df_period2 = analyze_pnl_by_periods(csv_file)
+    # CSV 파일 경로 가져오기
+    if csv_file is None:
+        # 최신 CSV 파일 찾기
+        trader_data_dir = f"trader_data/{trader_id}"
+        if not os.path.exists(trader_data_dir):
+            print(f"오류: {trader_id} 트레이더의 데이터 디렉토리를 찾을 수 없습니다.")
+            return
+        
+        # 디렉토리에서 CSV 파일 찾기
+        csv_files = [f for f in os.listdir(trader_data_dir) if f.endswith('.csv')]
+        if not csv_files:
+            print(f"오류: {trader_id} 트레이더의 CSV 파일을 찾을 수 없습니다.")
+            return
+        
+        # 가장 최근 파일 선택
+        csv_files.sort(reverse=True)
+        csv_file = os.path.join(trader_data_dir, csv_files[0])
+    
+    print(f"\n===== {trader_name} 트레이더 자산 성장 그래프 생성 시작 =====")
+    print(f"분석할 파일: {csv_file}")
+    
+    # 트레이더 설정에 따라 분석 방식 결정
+    use_periods = trader.get('use_periods', True)  # 기본값은 기간 구분 사용
+    
+    try:
+        if use_periods:
+            # 기간 구분이 있는 경우 (hummusXBT 같은 트레이더)
+            initial_capital_period1 = trader.get('initial_capital_period1', INITIAL_CAPITAL_PERIOD1)
+            initial_capital_period2 = trader.get('initial_capital_period2', INITIAL_CAPITAL_PERIOD2)
+            period_split_date_str = trader.get('period_split_date', '2024-06-15')
+            
+            # 기간 구분 날짜 설정
+            period_split_date = datetime.strptime(period_split_date_str, '%Y-%m-%d')
+            
+            # PnL 분석 (기간별)
+            df, df_period1, df_period2 = analyze_pnl_by_periods(csv_file, period_split_date, trader_id)
+            
+            # 자산 성장 그래프 생성
+            plot_asset_growth_by_periods(df, df_period1, df_period2)
+            
+            # 일별 자산 성장 그래프 생성
+            plot_daily_asset_growth(df_period1, df_period2)
+        else:
+            # 기간 구분이 없는 경우 (TRADERT22 같은 트레이더)
+            initial_capital = trader.get('initial_capital', None)  # 기본 원금 설정
+            
+            # 전체 기간 분석
+            df = analyze_pnl_without_periods(csv_file, trader_id)
+            
+            # 자산 성장 그래프 생성
+            plot_asset_growth_without_periods(df, initial_capital)
+        
+        print("\n===== 자산 성장 그래프 생성 완료 =====")
+        return True
+    except Exception as e:
+        print(f"오류: 자산 성장 그래프 생성 중 문제가 발생했습니다.")
+        print(f"오류 메시지: {str(e)}")
+        return False
+
+if __name__ == "__main__":
+    import sys
+    import argparse
+    
+    # 명령줄 인자 파싱
+    parser = argparse.ArgumentParser(description="트레이더 자산 성장 그래프 생성 도구")
+    parser.add_argument("-t", "--trader", help="분석할 트레이더 ID", type=str)
+    parser.add_argument("-f", "--file", help="분석할 CSV 파일 경로", type=str)
+    parser.add_argument("-o", "--output-dir", help="결과를 저장할 디렉토리", type=str)
+    
+    args = parser.parse_args()
     
     # 자산 성장 그래프 생성
-    plot_asset_growth_by_periods(df, df_period1, df_period2)
+    success = generate_asset_growth_charts(args.trader, args.file, args.output_dir)
     
-    # 일별 자산 성장 그래프 생성
-    plot_daily_asset_growth(df_period1, df_period2)
-    
-    print("\n===== 자산 성장 그래프 생성 완료 =====")
+    # 실행 결과에 따라 종료 코드 설정
+    sys.exit(0 if success else 1)
