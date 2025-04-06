@@ -372,9 +372,19 @@ def analyze_slippage_impact(trader_id=None, csv_file=None):
         
         if use_periods:
             # 기간 구분이 있는 경우 (hummusXBT 같은 트레이더)
-            initial_capital_period1 = trader.get('initial_capital_period1', INITIAL_CAPITAL_PERIOD1)
-            initial_capital_period2 = trader.get('initial_capital_period2', INITIAL_CAPITAL_PERIOD2)
-            period_split_date_str = trader.get('period_split_date', '2024-06-15')
+            initial_capital_period1 = trader.get('initial_capital_period1')
+            if initial_capital_period1 is None:
+                print(f"오류: {trader_id} 트레이더의 기간 1 원금이 설정되지 않았습니다.")
+                return None
+                
+            initial_capital_period2 = trader.get('initial_capital_period2')
+            if initial_capital_period2 is None:
+                print(f"오류: {trader_id} 트레이더의 기간 2 원금이 설정되지 않았습니다.")
+                return None
+            period_split_date_str = trader.get('period_split_date')
+            if period_split_date_str is None:
+                print(f"오류: {trader_id} 트레이더의 기간 구분 날짜가 설정되지 않았습니다.")
+                return None
             
             # 기간 구분 날짜 설정
             period_split_date = datetime.datetime.strptime(period_split_date_str, '%Y-%m-%d')

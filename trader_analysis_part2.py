@@ -78,7 +78,7 @@ def plot_drawdown_by_periods(df_period1, df_period2, trader_id=None, initial_cap
         plt.subplot(2, 1, 1)
         plt.plot(daily_pnl1['Close_Date'], drawdown1 * 100, color='red')
         plt.fill_between(daily_pnl1['Close_Date'], drawdown1 * 100, 0, color='red', alpha=0.3)
-        plt.title(f'기간 1 낙폭 (원금: {INITIAL_CAPITAL_PERIOD1:,} USD)', fontsize=16)
+        plt.title(f'기간 1 낙폭 (원금: {initial_capital_period1:,} USD)', fontsize=16)
         plt.ylabel('낙폭 (%)', fontsize=14)
         plt.grid(True, alpha=0.3)
         plt.gca().invert_yaxis()  # y축 반전 (낙폭을 아래로 표시)
@@ -108,7 +108,7 @@ def plot_drawdown_by_periods(df_period1, df_period2, trader_id=None, initial_cap
         plt.subplot(2, 1, 2)
         plt.plot(daily_pnl2['Close_Date'], drawdown2 * 100, color='red')
         plt.fill_between(daily_pnl2['Close_Date'], drawdown2 * 100, 0, color='red', alpha=0.3)
-        plt.title(f'기간 2 낙폭 (원금: {INITIAL_CAPITAL_PERIOD2:,} USD)', fontsize=16)
+        plt.title(f'기간 2 낙폭 (원금: {initial_capital_period2:,} USD)', fontsize=16)
         plt.ylabel('낙폭 (%)', fontsize=14)
         plt.grid(True, alpha=0.3)
         plt.gca().invert_yaxis()  # y축 반전 (낙폭을 아래로 표시)
@@ -390,9 +390,22 @@ def generate_all_visualizations(df, df_period1, df_period2, trader_id=None):
     # 트레이더 정보 가져오기
     from trader_config import get_trader
     trader = get_trader(trader_id)
-    initial_capital_period1 = trader.get('initial_capital_period1', 100000)
-    initial_capital_period2 = trader.get('initial_capital_period2', 2000000)
-    period_split_date_str = trader.get('period_split_date', None)
+    
+    # 기간별 원금 가져오기
+    initial_capital_period1 = trader.get('initial_capital_period1')
+    if initial_capital_period1 is None:
+        print(f"오류: {trader_id} 트레이더의 기간 1 원금이 설정되지 않았습니다.")
+        return
+        
+    initial_capital_period2 = trader.get('initial_capital_period2')
+    if initial_capital_period2 is None:
+        print(f"오류: {trader_id} 트레이더의 기간 2 원금이 설정되지 않았습니다.")
+        return
+        
+    period_split_date_str = trader.get('period_split_date')
+    if period_split_date_str is None:
+        print(f"오류: {trader_id} 트레이더의 기간 구분 날짜가 설정되지 않았습니다.")
+        return
     
     # 기간 구분 날짜 문자열을 datetime 객체로 변환
     period_split_date = None
@@ -463,7 +476,7 @@ def plot_pnl_without_periods(df, output_dir):
     print(f"PnL 그래프가 {os.path.join(output_dir, 'pnl_analysis.png')}에 저장되었습니다.")
 
 
-def generate_visualizations_without_periods(df, trader_id=None):
+def generate_visualizations_without_periods(df, trader_id=None, initial_capital=None):
     """기간 구분이 없는 트레이더를 위한 시각화 생성"""
     # 트레이더별 결과 디렉토리 가져오기
     result_dir, period1_dir, period2_dir, overall_dir = get_trader_result_dirs(trader_id)
@@ -491,12 +504,23 @@ def generate_visualizations_without_periods(df, trader_id=None):
         monthly_returns['Month'] = monthly_returns['Year_Month'].dt.month
         
         # 히트맵용 데이터 준비
-        pivot_table = monthly_returns.pivot_table(index='Year', columns='Month', values='PnL_Numeric')
-        
-        # 히트맵 생성
-        plt.figure(figsize=(12, 8))
-        sns.heatmap(pivot_table, annot=True, cmap='RdYlGn', fmt='.1f', linewidths=.5)
-        plt.title('월별 수익 (USDT)', fontsize=16)
+        if initial_capital is not None:
+            # 원금 정보가 있는 경우 퍼센트(%)로 표시
+            monthly_returns['Monthly_Return_Pct'] = monthly_returns['PnL_Numeric'] / initial_capital * 100
+            pivot_table = monthly_returns.pivot_table(index='Year', columns='Month', values='Monthly_Return_Pct')
+            
+            # 히트맵 생성
+            plt.figure(figsize=(12, 8))
+            sns.heatmap(pivot_table, annot=True, cmap='RdYlGn', fmt='.2f', linewidths=.5)
+            plt.title('월별 수익률 (%)', fontsize=16)
+        else:
+            # 원금 정보가 없는 경우 USDT 금액으로 표시
+            pivot_table = monthly_returns.pivot_table(index='Year', columns='Month', values='PnL_Numeric')
+            
+            # 히트맵 생성
+            plt.figure(figsize=(12, 8))
+            sns.heatmap(pivot_table, annot=True, cmap='RdYlGn', fmt='.1f', linewidths=.5)
+            plt.title('월별 수익 (USDT)', fontsize=16)
         plt.ylabel('년도', fontsize=14)
         plt.xlabel('월', fontsize=14)
         

@@ -55,6 +55,64 @@ TRADERS = {
         "initial_capital": None,  # 원금 정보 없음
         "use_periods": False,  # 기간 구분 없음
         "description": "Chatosil 트레이더 분석"
+    },
+    "Panic": {
+        "name": "惊惧 | Panic",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/2DBD6EA4CA7BC0F13BDD4868B7893CEF",
+        "initial_capital_period1": 1000000,  # 첫 번째 기간 원금: 1M USD (추정)
+        "initial_capital_period2": 1000000,  # 두 번째 기간 원금: 1M USD (추정)
+        "period_split_date": "2024-10-31",  # 기간 구분 기준 날짜 (2024년 10월 말)
+        "use_periods": True,  # 기간 구분 사용
+        "description": "惊惧 | Panic 트레이더 분석 (기간 구분 및 원금 추정)"
+    },
+    "RebelOfBabylon": {
+        "name": "RebelOfBabylon",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/07400C16C63B685FDAB8048CF4E8AFD2",
+        "initial_capital": 1000000,  
+        "use_periods": False,  # 기간 구분 없음
+        "description": "RebelOfBabylon 트레이더 분석"
+    },
+    "JeromeLoo": {
+        "name": "JeromeLoo 老王",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/0D85BE48AFEAE12D78FFF98E7369B72F",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "JeromeLoo 老王 트레이더 분석"
+    },
+    "TreeOfAlpha2": {
+        "name": "TreeOfAlpha2",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/DF74DFB6CB244F8033F1D66D5AA0B171",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "TreeOfAlpha2 트레이더 분석"
+    },
+    "StopWhen300M": {
+        "name": "赚够三亿U就收手 | Stop When You Earn 300 Million Yuan",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/D6A33BCC2092DF57673F42E6BBCFFB2F",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "赚够三亿U就收手 | Stop When You Earn 300 Million Yuan 트레이더 분석"
+    },
+    "ONLYCANDLE": {
+        "name": "ONLYCANDLE",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/616EAE3E24D9FFFA7EA8E500D102D2DC",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "ONLYCANDLE 트레이더 분석"
+    },
+    "cake-bnb": {
+        "name": "cake-bnb",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/38744FBD26B033A15516DFFCED8510E9",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "cake-bnb 트레이더 분석"
+    },
+    "Ohtanishohei": {
+        "name": "Ohtanishohei",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/EE2861F7029B8C98B6B000A06BC938DC",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "Ohtanishohei 트레이더 분석"
     }
 }
 

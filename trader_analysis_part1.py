@@ -13,12 +13,8 @@ import shutil
 plt.rcParams['font.family'] = 'AppleGothic'
 plt.rcParams['axes.unicode_minus'] = False  # 마이너스 기호 깨짐 방지
 
-# 원금 설정
-INITIAL_CAPITAL_PERIOD1 = 100000  # 첫 번째 기간 원금: 100K USD
-INITIAL_CAPITAL_PERIOD2 = 2000000  # 두 번째 기간 원금: 2M USD
-
-# 기간 구분 기준 날짜 (2024년 중반)
-PERIOD_SPLIT_DATE = datetime(2024, 6, 15)  # 이 날짜는 데이터를 보고 조정해야 함
+# 원금과 기간 구분 날짜는 트레이더 설정에서 가져옴
+# 이제 하드코딩된 값을 사용하지 않음
 
 # 결과 저장 경로
 RESULT_DIR = "analysis_results"
