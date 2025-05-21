@@ -10,10 +10,10 @@
 
 * Total Return: 240.75%
 * Annualized Return: 471.09%
-* Annualized Volatility: 15.97%
+* Annualized Volatility: 19.22%
 
 ## Risk Metrics
 
 * Maximum Drawdown (MDD): -5.91%
-* Sharpe Ratio: 29.50
+* Sharpe Ratio: 24.51
 * Calmar Ratio: 79.72

@@ -158,7 +158,7 @@ def calculate_performance_metrics(df):
     
     # Annualized volatility (using log returns)
     daily_vol = df['log_return'].std()
-    annualized_vol = daily_vol * np.sqrt(252)  # Assuming 252 trading days in a year
+    annualized_vol = daily_vol * np.sqrt(365)  # Using 365 days for crypto markets (24/7 trading)
     
     # Sharpe ratio (assuming risk-free rate of 0% for simplicity)
     sharpe_ratio = (annualized_return) / annualized_vol
@@ -229,16 +229,16 @@ def create_monthly_return_heatmap(df, output_dir, slippage_str=""):
 
 def plot_performance(df, metrics, output_dir, slippage_str=""):
     """
-    종합 성능 차트 생성
+    Generate comprehensive performance chart
     
     Args:
-        df (DataFrame): 자본금 데이터
-        metrics (dict): 성능 지표
-        output_dir (str): 결과 저장 디렉토리
-        slippage_str (str): 슬리피지 정보 문자열
+        df (DataFrame): Capital data
+        metrics (dict): Performance metrics
+        output_dir (str): Output directory
+        slippage_str (str): Slippage info string
     """
-    # Create figure with 4 subplots
-    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(20, 14))
+    # Create figure with 2 subplots (1x2 grid)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
     
     # Title for the figure
     title = 'Portfolio Performance Analysis'
@@ -246,72 +246,41 @@ def plot_performance(df, metrics, output_dir, slippage_str=""):
         title += f' {slippage_str}'
     fig.suptitle(title, fontsize=24, y=0.98)
     
+    # Set datetime column as index for proper date plotting
+    df_plot = df.copy()
+    df_plot.set_index('time', inplace=True)
+    
     # Equity curve (ax1)
-    df['capital'].plot(ax=ax1, color='#1f77b4', linewidth=2)
+    df_plot['capital'].plot(ax=ax1, color='#1f77b4', linewidth=2)
     ax1.set_title('Equity Curve', fontsize=16)
     ax1.set_ylabel('Capital (USDT)', fontsize=14)
-    ax1.set_xlabel('Date', fontsize=14)
     ax1.grid(True, alpha=0.3)
     
     # Format y-axis with commas
     ax1.yaxis.set_major_formatter(FuncFormatter(lambda x, _: '{:,.0f}'.format(x)))
     
-    # Drawdown (ax2)
-    df['drawdown'].plot(ax=ax2, color='#d62728', linewidth=2)
-    ax2.set_title('Drawdown', fontsize=16)
-    ax2.set_ylabel('Drawdown (%)', fontsize=14)
-    ax2.set_xlabel('Date', fontsize=14)
-    ax2.grid(True, alpha=0.3)
+    # Format x-axis with dates at appropriate intervals
+    import matplotlib.dates as mdates
     
-    # Format y-axis as percentage
-    ax2.yaxis.set_major_formatter(FuncFormatter(lambda y, _: '{:.1%}'.format(y)))
+    # Determine date locator based on the date range
+    date_range = (df['time'].max() - df['time'].min()).days
     
-    # Fill the drawdown area
-    ax2.fill_between(df['time'], 0, df['drawdown'], color='#d62728', alpha=0.3)
+    if date_range <= 60:  # For short periods (< 2 months)
+        ax1.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
+    elif date_range <= 180:  # For medium periods (2-6 months)
+        ax1.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+    else:  # For longer periods
+        ax1.xaxis.set_major_locator(mdates.MonthLocator(interval=2))
     
-    # Mark the maximum drawdown
-    max_dd_idx = df['drawdown'].idxmin()
-    max_dd_date = df.loc[max_dd_idx, 'time']
-    max_dd = df.loc[max_dd_idx, 'drawdown']
-    ax2.scatter(max_dd_date, max_dd, color='black', s=100, zorder=5)
-    ax2.annotate(f'Max DD: {max_dd:.2%}', 
-                xy=(max_dd_date, max_dd),
-                xytext=(20, -40),
-                textcoords='offset points',
-                arrowprops=dict(arrowstyle='->', color='black'),
-                bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.7))
+    # Format the date labels with year included
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%b %d, %Y'))
     
-    # Monthly returns boxplot (ax3)
-    # Extract month for grouping
-    df['month'] = df['time'].dt.month_name()
-    monthly_returns = df.groupby('month')['daily_return'].apply(list)
+    # Rotate date labels for better readability
+    plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha='right')
     
-    # Reorder months
-    month_order = ['January', 'February', 'March', 'April', 'May', 'June', 
-                  'July', 'August', 'September', 'October', 'November', 'December']
-    monthly_returns = monthly_returns.reindex(month_order)
-    
-    # Plot boxplot
-    ax3.boxplot([returns for returns in monthly_returns if returns],
-               labels=[month[:3] for month in monthly_returns.index if monthly_returns[month]],
-               patch_artist=True,
-               boxprops=dict(facecolor='#2ca02c', alpha=0.5),
-               whiskerprops=dict(color='#2ca02c'),
-               medianprops=dict(color='darkred'))
-    
-    ax3.set_title('Monthly Daily Returns Distribution', fontsize=16)
-    ax3.set_ylabel('Daily Return (%)', fontsize=14)
-    ax3.grid(True, alpha=0.3)
-    
-    # Format y-axis as percentage
-    ax3.yaxis.set_major_formatter(FuncFormatter(lambda y, _: '{:.1%}'.format(y)))
-    
-    # Plot zero line
-    ax3.axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.7)
-    
-    # Performance metrics (ax4)
+    # Performance metrics (ax2)
     # Clear the axis and just use it as a text box
-    ax4.axis('off')
+    ax2.axis('off')
     
     # Create performance metrics string
     metrics_str = '\n'.join([
@@ -328,9 +297,9 @@ def plot_performance(df, metrics, output_dir, slippage_str=""):
     
     # Add text box with performance metrics
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-    ax4.text(0.05, 0.95, metrics_str, transform=ax4.transAxes, fontsize=14,
+    ax2.text(0.05, 0.95, metrics_str, transform=ax2.transAxes, fontsize=14,
             verticalalignment='top', bbox=props)
-    ax4.set_title('Performance Metrics', fontsize=16)
+    ax2.set_title('Performance Metrics', fontsize=16)
     
     # Save figure
     plt.tight_layout()
