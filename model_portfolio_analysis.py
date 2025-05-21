@@ -13,6 +13,17 @@ from calendar import month_name
 from math import sqrt
 from overlap_analysis.config import model_initial_capital, trader_weight
 
+# 저장 관련 유틸리티 함수 import
+from utils.portfolio_utils import (
+    save_summary_data,
+    save_portfolio_data,
+    plot_capital_graph,
+    plot_mdd,
+    plot_mdd_heatmap,
+    save_drawdown_data,
+    save_monthly_returns
+)
+
 # 분석할 마크다운 파일 경로
 md_file_path = os.path.join('overlap_analysis', 'output', 'position_overlap_analysis.md')
 
@@ -399,14 +410,6 @@ for i, period in enumerate(periods):
                 # 기여도 계산 (할당 비율 * 실현 수익)
                 trader_contribution = allocation * trader_realized_pnl
                 
-                # 오버플로우 방지 처리
-                if abs(trader_contribution) > model_capital * 0.5:  # 리미터 적용
-                    print(f"Warning: Excessively large contribution from {trader}: {trader_contribution}. Capping at 10%")
-                    if trader_contribution > 0:
-                        trader_contribution = model_capital * 0.1  # 최대 10% 수익 제한
-                    else:
-                        trader_contribution = model_capital * -0.1  # 최대 10% 손실 제한
-                
                 period_contribution += trader_contribution
                 
                 # 트레이더별 수익률 계산 
@@ -521,95 +524,18 @@ summary_data = {
     'period_days': (pd.to_datetime(df['time'].iloc[-1]) - pd.to_datetime(df['time'].iloc[0])).days
 }
 
-# JSON 파일로 저장
-with open(summary_path, 'w') as f:
-    json.dump(summary_data, f, indent=2, default=str)
-print(f"Summary data saved: {summary_path}")
+# 모델 포트폴리오 요약 데이터 저장
+summary_data['total_return_pct'] = ((model_capital / model_initial_capital) - 1) * 100
+summary_data['annualized_return_pct'] = annualized_ret
+summary_data['std_dev_pct'] = daily_returns['daily_return'].std() * 100
+summary_data['sharpe_ratio'] = sharpe
+save_summary_data(summary_data, output_dir)
 
-# 요약 마크다운 파일 저장
-summary_md_path = os.path.join(output_dir, 'model_portfolio_summary.md')
-with open(summary_md_path, 'w') as f:
-    f.write('# 모델 포트폴리오 성과 요약\n\n')
-    
-    f.write('## 결과 요약\n\n')
-    f.write(f"* 총 수익률: {((model_capital / model_initial_capital) - 1) * 100:+.2f}%\n")
-    f.write(f"* 연환산 수익률: {annualized_ret:+.2f}%\n")
-    f.write(f"* 표준편차: {daily_returns['daily_return'].std() * 100:.2f}%\n")
-    f.write(f"* 샤프 비율: {sharpe:.2f}\n")
-    f.write(f"* 칼마 비율: {calmar:.2f}\n")
-    f.write(f"* MDD: {mdd:.2f}%\n")
-    
-    f.write('\n## 포트폴리오 정보\n\n')
-    f.write(f"* 초기 자본: {model_initial_capital:,.2f} USD\n")
-    f.write(f"* 최종 자본: {model_capital:,.2f} USD\n")
-    f.write(f"* 모니터링 기간: {df['time'].iloc[0]} ~ {df['time'].iloc[-1]} ({(pd.to_datetime(df['time'].iloc[-1]) - pd.to_datetime(df['time'].iloc[0])).days} 일)\n")
-    f.write(f"* 총 차트 데이터 개수: {len(df)} 개\n")
-    f.write(f"* 총 트레이딩 일수: {len(daily_returns)} 일\n")
+# 포트폴리오 자본 데이터 저장
+save_portfolio_data(df, results_data, output_dir)
 
-print(f"Summary markdown saved: {summary_md_path}")
-
-
-# Save to CSV file
-csv_path = os.path.join(output_dir, 'model_portfolio_capital.csv')
-df.to_csv(csv_path, index=False)
-print(f"\nCSV file saved: {csv_path}")
-
-# 마크다운 파일 생성
-md_lines = []
-md_lines.append("# 모델 포트폴리오 자본 변화 분석\n")
-md_lines.append(f"초기 자본: {model_initial_capital:,.2f} USD\n")
-md_lines.append(f"최종 자본: {model_capital:,.2f} USD\n")
-md_lines.append(f"총 수익률: {((model_capital / model_initial_capital) - 1) * 100:+.2f}%\n")
-
-md_lines.append("## 구간별 자본 변화\n")
-md_lines.append("| 구간 | 시간 | 시작 자본(USD) | 종료 자본(USD) | 변화(USD) | 변화율(%) |")
-md_lines.append("|---|---|---|---|---|---|")
-
-for data in results_data:
-    time_str = data['time'].strftime('%Y-%m-%d %H:%M:%S') if data['time'] else 'N/A'
-    md_lines.append(f"| {data['period']} | {time_str} | {data['start_capital']:,.2f} | {data['end_capital']:,.2f} | {data['change']:+,.2f} | {data['change_pct']:+.2f} |")
-
-md_path = os.path.join(output_dir, 'model_portfolio_analysis.md')
-with open(md_path, 'w', encoding='utf-8') as f:
-    f.write('\n'.join(md_lines))
-print(f"Markdown file saved: {md_path}")
-
-# Plot capital change over time
-plt.figure(figsize=(14, 7))
-plt.plot(pd.to_datetime(df['time']), df['end_capital'], marker='o', linestyle='-', markersize=3)
-plt.title('Model Portfolio Capital Over Time')
-plt.xlabel('Date')
-plt.ylabel('Capital (USD)')
-plt.grid(True)
-
-# Format x-axis dates - reduce crowding by using fewer ticks and a cleaner format
-ax = plt.gca()
-# Check date range to determine appropriate tick interval
-date_range = (pd.to_datetime(df['time']).max() - pd.to_datetime(df['time']).min()).days
-
-if date_range > 180:  # For long periods (>6 months)
-    ax.xaxis.set_major_locator(mdates.MonthLocator(bymonthday=1))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-elif date_range > 60:  # For medium periods (2-6 months)
-    ax.xaxis.set_major_locator(mdates.WeekLocator(interval=2))  # Every 2 weeks
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-else:  # For shorter periods
-    ax.xaxis.set_major_locator(mdates.WeekLocator(interval=1))  # Weekly
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-
-# Rotate date labels for better readability
-plt.gcf().autofmt_xdate(rotation=45)
-
-# Add minor ticks for reference without labels
-ax.xaxis.set_minor_locator(mdates.DayLocator(interval=7))
-plt.grid(True, which='major', axis='both')
-plt.grid(True, which='minor', axis='x', alpha=0.2)
-
-plt.tight_layout()
-graph_path = os.path.join(output_dir, 'model_portfolio_capital.png')
-plt.savefig(graph_path)
-plt.close()
-print(f"Graph saved: {graph_path}")
+# 자본 변화 그래프 생성 및 저장
+plot_capital_graph(df, output_dir)
 
 # MDD 그래프 생성 및 저장
 plot_mdd(df, os.path.join(output_dir, 'model_portfolio_drawdown.png'))
@@ -619,36 +545,8 @@ print(f"Drawdown graph saved: {os.path.join(output_dir, 'model_portfolio_drawdow
 plot_mdd_heatmap(df, os.path.join(output_dir, 'model_portfolio_heatmap.png'))
 print(f"Drawdown heatmap saved: {os.path.join(output_dir, 'model_portfolio_heatmap.png')}")
 
-# MDD 데이터 저장
-mdd_df = df[['time', 'end_capital', 'cumulative_max', 'drawdown']]
-mdd_df.to_csv(os.path.join(output_dir, 'model_portfolio_drawdown.csv'), index=False)
-print(f"Drawdown data saved: {os.path.join(output_dir, 'model_portfolio_drawdown.csv')}")
+# 드로다운 데이터 저장
+save_drawdown_data(df, monthly_mdd, output_dir)
 
-# 월별 MDD 데이터 저장
-monthly_mdd.to_csv(os.path.join(output_dir, 'model_portfolio_monthly_mdd.csv'), index=False)
-print(f"Monthly MDD data saved: {os.path.join(output_dir, 'model_portfolio_monthly_mdd.csv')}")
-
-# Monthly return graph creation and saving
-df['month'] = df['time'].dt.strftime('%Y-%m')
-monthly_returns = df.groupby('month').apply(lambda x: (x['end_capital'].iloc[-1] / x['start_capital'].iloc[0] - 1) * 100).reset_index()
-monthly_returns.columns = ['month', 'monthly_return']
-
-plt.figure(figsize=(12, 6))
-plt.bar(monthly_returns['month'], monthly_returns['monthly_return'])
-plt.title('Model Portfolio Monthly Returns')
-plt.xlabel('Month')
-plt.ylabel('Monthly Return (%)')
-plt.grid(axis='y')
-plt.xticks(rotation=45)
-
-# Save graph
-monthly_graph_path = os.path.join(output_dir, 'model_portfolio_monthly_returns.png')
-plt.tight_layout()
-plt.savefig(monthly_graph_path, dpi=300)
-plt.close()
-print(f"Monthly returns graph saved: {monthly_graph_path}")
-
-# Save monthly returns to CSV
-monthly_csv_path = os.path.join(output_dir, 'model_portfolio_monthly_returns.csv')
-monthly_returns.to_csv(monthly_csv_path, index=False)
-print(f"Monthly returns CSV saved: {monthly_csv_path}")
+# 월별 수익률 데이터 및 그래프 저장
+save_monthly_returns(df, output_dir)
