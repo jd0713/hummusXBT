@@ -1,6 +1,7 @@
 import pandas as pd
 import re
 import os
+from datetime import datetime
 from config import target_files, trader_weight, initial_balance, TRADER_FILTERS
 from data_loader import load_all_positions, detect_time_columns, parse_and_convert
 from overlap_analyzer import analyze_all_periods
@@ -18,11 +19,16 @@ if __name__ == "__main__":
     # 초기 자산은 config에서 가져옴
     current_balance = initial_balance.copy()
 
-    # 포지션 상세 정보도 함께 로드
+    # 데이터 로드 시작일 설정 (2024년 9월 1일)
+    # start_date = datetime(2024, 9, 1)
+    start_date = None
+    
+    # 전체 포지션 데이터를 로드하고 날짜 필터링 적용
     all_positions = []
     all_positions_raw = []
-    filtered_out_count = 0  # 필터링으로 제외된 포지션 수
+    filtered_count = 0  # 필터링으로 제외된 포지션 수
     
+    # 전체 포지션 데이터 로드
     for trader, abs_path in target_files.items():
         df = pd.read_csv(abs_path)
         open_col, close_col, mode = detect_time_columns(df)
@@ -37,20 +43,25 @@ if __name__ == "__main__":
                 open_t = parse_and_convert(str(row[open_col]), mode)
                 close_t = parse_and_convert(str(row[close_col]), mode)
                 
+                # 날짜 필터링 적용 (필터가 있을 때만)
+                if start_date and open_t < start_date:
+                    filtered_count += 1
+                    continue
+                
                 symbol = row.get('Symbol', '')
                 direction = row.get('Direction', '')
                 
-                # 필터링 적용 - position_mode 기준
+                # 트레이더 필터 적용 - position_mode 기준
                 if position_mode == "long_only" and direction.lower() != 'long':
-                    filtered_out_count += 1
+                    filtered_count += 1
                     continue
                 elif position_mode == "short_only" and direction.lower() != 'short':
-                    filtered_out_count += 1
+                    filtered_count += 1
                     continue
                 
-                # 필터링 적용 - excluded_bases 기준
+                # 트레이더 필터 적용 - excluded_bases 기준
                 if excluded_bases and any(base in symbol for base in excluded_bases):
-                    filtered_out_count += 1
+                    filtered_count += 1
                     continue
                 
                 # 기본 포지션 정보 추가
@@ -103,7 +114,11 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"[WARN] {trader} row skipped ({e})")
     
-    print(f"총 {len(all_positions)}개 포지션 로드 완료. (필터링으로 제외된 포지션: {filtered_out_count}개)")
+    print(f"총 {len(all_positions)}개 포지션 로드 완료. (필터링으로 제외된 포지션: {filtered_count}개)")
+    if start_date:
+        print(f"[INFO] 데이터 로드 시작일: {start_date.strftime('%Y-%m-%d')}")
+    else:
+        print("[INFO] 날짜 필터링 없이 모든 데이터 로드")
 
     periods = analyze_all_periods(all_positions, all_positions_raw, current_balance, trader_weight)
     print(f"\n=== 모든 구간 분석 결과 (UTC+9, 한국시간) ===")
