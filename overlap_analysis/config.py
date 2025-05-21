@@ -30,5 +30,21 @@ initial_balance = {
     'majorswinger': 2000000
 }
 
+# 트레이더별 포지션 필터/정책 설정 (롱/숏 제한, 특정 베이스 심볼 제외 등)
+TRADER_FILTERS = {
+    "majorswinger": {  # 대소문자 주의: 'majorSwinger'가 아닌 'majorswinger'로 수정
+        "position_mode": "long_only",  # 롱만 카피
+        "excluded_bases": ["SOL", "ARB"],
+    },
+    "Chatosil": {
+        "position_mode": "short_only",  # 숏만 카피
+        "excluded_bases": ["BTC", "ETH", "XRP", "BNB"],
+    },
+    "Ohtanishohei": {
+        "position_mode": "long_only",  # 롱만 카피
+    }
+    # 필요 없는 트레이더는 생략 가능
+}
+
 # 모델 포트폴리오 초기 자산
 model_initial_capital = 100000

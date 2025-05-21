@@ -1,9 +1,10 @@
 import pandas as pd
-from config import target_files, trader_weight, initial_balance
+import re
+import os
+from config import target_files, trader_weight, initial_balance, TRADER_FILTERS
 from data_loader import load_all_positions, detect_time_columns, parse_and_convert
 from overlap_analyzer import analyze_all_periods
 from report_generator import generate_markdown
-import os
 # 단순 롱/숏 관련 함수 제거
 from topn_analysis import top_n_by_concurrent_positions, top_n_by_net_ratio
 from report_generator import generate_topn_concurrent_positions_md, generate_topn_net_ratio_md
@@ -20,18 +21,45 @@ if __name__ == "__main__":
     # 포지션 상세 정보도 함께 로드
     all_positions = []
     all_positions_raw = []
+    filtered_out_count = 0  # 필터링으로 제외된 포지션 수
+    
     for trader, abs_path in target_files.items():
         df = pd.read_csv(abs_path)
         open_col, close_col, mode = detect_time_columns(df)
+        
+        # 해당 트레이더에 대한 필터 설정 가져오기
+        trader_filter = TRADER_FILTERS.get(trader.lower(), {})  # 소문자로 비교
+        position_mode = trader_filter.get("position_mode", "all")  # 기본값은 all (모든 포지션)
+        excluded_bases = trader_filter.get("excluded_bases", [])
+        
         for _, row in df.iterrows():
             try:
                 open_t = parse_and_convert(str(row[open_col]), mode)
                 close_t = parse_and_convert(str(row[close_col]), mode)
+                
+                symbol = row.get('Symbol', '')
+                direction = row.get('Direction', '')
+                
+                # 필터링 적용 - position_mode 기준
+                if position_mode == "long_only" and direction.lower() != 'long':
+                    filtered_out_count += 1
+                    continue
+                elif position_mode == "short_only" and direction.lower() != 'short':
+                    filtered_out_count += 1
+                    continue
+                
+                # 필터링 적용 - excluded_bases 기준
+                if excluded_bases and any(base in symbol for base in excluded_bases):
+                    filtered_out_count += 1
+                    continue
+                
+                # 기본 포지션 정보 추가
                 all_positions.append({
                     'trader': trader,
                     'open': open_t,
                     'close': close_t,
                 })
+                
                 # Max Size USDT 필드 가져오기 (주요 필드)
                 max_size_usdt = row.get('Max Size USDT', 0)
                 
@@ -40,7 +68,6 @@ if __name__ == "__main__":
                     # 숫자 형식으로 변환
                     if isinstance(max_size_usdt, str):
                         # 문자열에서 숫자만 추출
-                        import re
                         numeric_str = re.sub(r'[^0-9.]', '', max_size_usdt)
                         size = float(numeric_str) if numeric_str else 0.0
                     else:
@@ -64,8 +91,8 @@ if __name__ == "__main__":
                     
                 all_positions_raw.append({
                     'trader': trader,
-                    'symbol': row.get('Symbol', ''),
-                    'direction': row.get('Direction', ''),
+                    'symbol': symbol,
+                    'direction': direction,
                     'size': size,  # 포지션 크기(톨더 요약 계산용)
                     'volume': volume,  # 거래량 데이터 (표시용)
                     'open': open_t,
@@ -75,7 +102,8 @@ if __name__ == "__main__":
                 })
             except Exception as e:
                 print(f"[WARN] {trader} row skipped ({e})")
-    print(f"총 {len(all_positions)}개 포지션 로드 완료.")
+    
+    print(f"총 {len(all_positions)}개 포지션 로드 완료. (필터링으로 제외된 포지션: {filtered_out_count}개)")
 
     periods = analyze_all_periods(all_positions, all_positions_raw, current_balance, trader_weight)
     print(f"\n=== 모든 구간 분석 결과 (UTC+9, 한국시간) ===")

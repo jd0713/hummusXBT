@@ -582,10 +582,28 @@ plt.xlabel('Date')
 plt.ylabel('Capital (USD)')
 plt.grid(True)
 
-# Format x-axis dates
-plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=7))  # every 7 days
-plt.gcf().autofmt_xdate()  # Rotate date labels
+# Format x-axis dates - reduce crowding by using fewer ticks and a cleaner format
+ax = plt.gca()
+# Check date range to determine appropriate tick interval
+date_range = (pd.to_datetime(df['time']).max() - pd.to_datetime(df['time']).min()).days
+
+if date_range > 180:  # For long periods (>6 months)
+    ax.xaxis.set_major_locator(mdates.MonthLocator(bymonthday=1))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+elif date_range > 60:  # For medium periods (2-6 months)
+    ax.xaxis.set_major_locator(mdates.WeekLocator(interval=2))  # Every 2 weeks
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+else:  # For shorter periods
+    ax.xaxis.set_major_locator(mdates.WeekLocator(interval=1))  # Weekly
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+
+# Rotate date labels for better readability
+plt.gcf().autofmt_xdate(rotation=45)
+
+# Add minor ticks for reference without labels
+ax.xaxis.set_minor_locator(mdates.DayLocator(interval=7))
+plt.grid(True, which='major', axis='both')
+plt.grid(True, which='minor', axis='x', alpha=0.2)
 
 plt.tight_layout()
 graph_path = os.path.join(output_dir, 'model_portfolio_capital.png')
