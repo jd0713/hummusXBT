@@ -1,9 +1,9 @@
 ===== Period 2 Slippage Impact Analysis =====
 
 Metric               Original        Slippage 0.05%  Slippage 0.1%   Slippage 0.15% 
-Total PnL (USD)      727596.48       493158.22       258719.96       24281.70       
-Total Return (%)     72.76           49.32           25.87           2.43           
-Annualized Return (%) 311.77          182.29          81.42           6.41           
+Total PnL (USD)      519666.27       253805.31       -12055.65       -277916.60     
+Total Return (%)     51.97           25.38           -1.21           -27.79         
+Annualized Return (%) 176.86          73.39           -2.91           -54.72         
 MDD (%)              -29.29          -30.08          -30.88          -31.69         
-Sharpe Ratio         3.73            2.53            1.31            0.12           
-Win Rate (%)         64.95           62.25           55.88           50.25          
+Sharpe Ratio         2.43            1.18            -0.06           -1.24          
+Win Rate (%)         62.90           59.70           54.16           48.61          

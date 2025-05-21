@@ -12,15 +12,31 @@ from matplotlib.ticker import FuncFormatter
 import matplotlib.dates as mdates
 
 # 상수 정의
-SLIPPAGE_RATES = [0.0005, 0.001, 0.0015]  # 0.05%, 0.1%, 0.15%
+SLIPPAGE_RATES = [0.0005, 0.001, 0.0015, 0.003]  # 0.05%, 0.1%, 0.15%, 0.3%
 
 # 결과 디렉토리 설정 (트레이더별 디렉토리 사용)
 def get_results_dir(trader_id=None):
     """트레이더 ID에 따른 결과 디렉토리 경로 반환"""
     if trader_id:
         return os.path.join('analysis_results', trader_id, 'slippage_analysis')
-    else:
-        return 'analysis_results/slippage_analysis'
+    return os.path.join('analysis_results', 'slippage_analysis')
+
+def find_latest_csv_file(trader_id):
+    """트레이더 ID에 해당하는 가장 최신 CSV 파일을 찾습니다."""
+    trader_data_dir = f"trader_data/{trader_id}"
+    if not os.path.exists(trader_data_dir):
+        print(f"오류: {trader_id} 트레이더의 데이터 디렉토리를 찾을 수 없습니다.")
+        return None
+    
+    # 디렉토리에서 CSV 파일 찾기
+    csv_files = [f for f in os.listdir(trader_data_dir) if f.endswith('.csv') and 'closed_positions' in f]
+    if not csv_files:
+        print(f"오류: {trader_id} 트레이더의 CSV 파일을 찾을 수 없습니다.")
+        return None
+    
+    # 가장 최근 파일 선택
+    csv_files.sort(reverse=True)
+    return os.path.join(trader_data_dir, csv_files[0])
 
 # 기본 결과 디렉토리 (하위 호환성 유지)
 RESULTS_DIR = 'analysis_results/slippage_analysis'
@@ -35,34 +51,55 @@ def parse_number(num_str):
         return float(num_str.replace(',', '').replace(' USDT', ''))
     return num_str
 
-def apply_slippage(df, slippage_rate):
+def apply_slippage(df, slippage_rate=0.001):
     """
-    거래 데이터에 슬리피지를 적용
+    주어진 포지션 데이터에 슬리피지 영향을 적용하여 수익에 미치는 영향을 계산합니다.
     
-    슬리피지는 진입가와 청산가 모두에 적용됩니다:
-    - Long 포지션: 진입가는 더 높게, 청산가는 더 낮게 조정
-    - Short 포지션: 진입가는 더 낮게, 청산가는 더 높게 조정
-    
+    슬리피지는 주문 실행 시 시장 가격과 실제 실행 가격 사이의 차이로, 
+    일반적으로 포지션 크기에 비례하여 증가합니다.
     이로 인해 실현 PnL이 감소하게 됩니다.
     """
     df_copy = df.copy()
     
+    # 데이터 포맷 확인
+    has_volume = 'Volume' in df_copy.columns
+    has_entry_price = 'Entry Price' in df_copy.columns and 'Max Size' in df_copy.columns
+    
+    # 적절한 슬리피지 계산 방식이 없으면 오류 메시지 출력
+    if not (has_volume or has_entry_price):
+        print("오류: 슬리피지 계산에 필요한 필드가 없습니다. 'Volume' 또는 ('Entry Price'와 'Max Size')가 필요합니다.")
+        return df_copy
+    
     # 슬리피지 적용된 PnL 계산
     for idx, row in df_copy.iterrows():
         direction = row['Direction']
-        entry_price = row['Entry Price']
-        max_size = row['Max Size']
-        realized_pnl = row['Realized PnL']
         
-        # 슬리피지 금액 계산 (진입과 청산 모두에 적용)
-        slippage_amount = 2 * entry_price * max_size * slippage_rate
+        # Realized PnL 파싱 - "123.45 USDT" 형식에서 숫자만 추출
+        realized_pnl_str = str(row['Realized PnL'])
+        realized_pnl = float(realized_pnl_str.replace(',', '').replace(' USDT', ''))
+        
+        # 슬리피지 금액 계산 - 데이터 포맷에 따라 다른 방식 사용
+        if has_volume:
+            # Volume 필드가 존재하는 경우 (majorswinger, btcinsider 등의 format)
+            volume_str = str(row['Volume'])
+            # "1234.56 USDT" 형식에서 숫자만 추출
+            volume = float(volume_str.replace(',', '').replace(' USDT', ''))
+            slippage_amount = volume * slippage_rate
+        elif has_entry_price:
+            # 기존 format을 사용하는 경우
+            entry_price = float(str(row['Entry Price']).replace(',', ''))
+            max_size = float(str(row['Max Size']).replace(',', ''))
+            slippage_amount = 2 * entry_price * max_size * slippage_rate
         
         # PnL에서 슬리피지 금액 차감
         df_copy.at[idx, 'Slippage_Adjusted_PnL'] = realized_pnl - slippage_amount
         
         # 슬리피지 조정된 수익률 계산
-        max_size_usdt = abs(row['Max Size USDT'])
-        df_copy.at[idx, 'Slippage_Adjusted_PnL_Pct'] = (df_copy.at[idx, 'Slippage_Adjusted_PnL'] / max_size_usdt) * 100
+        if 'Max Size USDT' in df_copy.columns:
+            # "1234.56 USDT" 형식에서 숫자만 추출
+            max_size_usdt_str = str(row['Max Size USDT'])
+            max_size_usdt = float(max_size_usdt_str.replace(',', '').replace(' USDT', ''))
+            df_copy.at[idx, 'Slippage_Adjusted_PnL_Pct'] = (df_copy.at[idx, 'Slippage_Adjusted_PnL'] / max_size_usdt) * 100
     
     return df_copy
 
@@ -187,7 +224,7 @@ def plot_asset_growth_comparison(metrics_list, period_name, slippage_rates):
     """Plot asset growth comparison with different slippage rates"""
     plt.figure(figsize=(14, 8))
     
-    colors = ['green', 'blue', 'orange', 'red']
+    colors = ['green', 'blue', 'orange', 'red', 'purple']  # 5개 색상으로 변경
     labels = ['Original (No Slippage)'] + [f'Slippage {rate*100:.2f}%' for rate in slippage_rates]
     
     # Convert Korean period name to English
@@ -225,7 +262,7 @@ def plot_pnl_growth_comparison(metrics_list, period_name, slippage_rates):
     """Plot PnL growth comparison with different slippage rates for traders without initial capital"""
     plt.figure(figsize=(14, 8))
     
-    colors = ['green', 'blue', 'orange', 'red']
+    colors = ['green', 'blue', 'orange', 'red', 'purple']  # 5개 색상으로 변경
     labels = ['Original (No Slippage)'] + [f'Slippage {rate*100:.2f}%' for rate in slippage_rates]
     
     # Convert Korean period name to English
@@ -261,7 +298,7 @@ def plot_pnl_growth_comparison(metrics_list, period_name, slippage_rates):
 
 def create_performance_comparison_table(metrics_list, period_name, slippage_rates):
     """Create performance comparison table for different slippage rates"""
-    headers = ['Metric', 'Original', 'Slippage 0.05%', 'Slippage 0.1%', 'Slippage 0.15%']
+    headers = ['Metric', 'Original', 'Slippage 0.05%', 'Slippage 0.1%', 'Slippage 0.15%', 'Slippage 0.3%']
     
     # Convert Korean period name to English
     if period_name == "기간 1":
@@ -327,9 +364,6 @@ def analyze_slippage_impact(trader_id=None, csv_file=None):
     trader = get_trader(trader_id)
     trader_name = trader['name']
     
-    # 트레이더 설정에 따라 분석 방식 결정
-    use_periods = trader.get('use_periods', True)  # 기본값은 기간 구분 사용
-    
     # 결과 폴더 설정
     global RESULTS_DIR
     RESULTS_DIR = f"analysis_results/{trader_id}/slippage_analysis"
@@ -337,21 +371,12 @@ def analyze_slippage_impact(trader_id=None, csv_file=None):
     
     # CSV 파일 경로 가져오기
     if csv_file is None:
-        # 최신 CSV 파일 찾기
-        trader_data_dir = f"trader_data/{trader_id}"
-        if not os.path.exists(trader_data_dir):
-            print(f"오류: {trader_id} 트레이더의 데이터 디렉토리를 찾을 수 없습니다.")
-            return False
-        
-        # 디렉토리에서 CSV 파일 찾기
-        csv_files = [f for f in os.listdir(trader_data_dir) if f.endswith('.csv')]
-        if not csv_files:
-            print(f"오류: {trader_id} 트레이더의 CSV 파일을 찾을 수 없습니다.")
-            return False
-        
-        # 가장 최근 파일 선택
-        csv_files.sort(reverse=True)
-        csv_file = os.path.join(trader_data_dir, csv_files[0])
+        # 트레이더 ID로 CSV 파일 경로 생성
+        latest_file = find_latest_csv_file(trader_id)
+        if not latest_file:
+            print(f"오류: {trader_id}에 대한 CSV 파일을 찾을 수 없습니다.")
+            return
+        csv_file = latest_file
     
     print(f"\n===== {trader_name} 트레이더 슬리피지 영향 분석 시작 =====")
     print(f"분석할 파일: {csv_file}")
@@ -360,15 +385,41 @@ def analyze_slippage_impact(trader_id=None, csv_file=None):
         # CSV 파일 로드
         df = pd.read_csv(csv_file)
         
-        # 데이터 전처리
-        df['Entry Price'] = df['Entry Price'].apply(parse_number)
-        df['Max Size'] = df['Max Size'].apply(parse_number)
-        df['Max Size USDT'] = df['Max Size USDT'].apply(parse_number)
-        df['Realized PnL'] = df['Realized PnL'].apply(parse_number)
-        df['Open Time'] = df['Open Time'].apply(parse_date)
-        df['Close Time'] = df['Close Time'].apply(parse_date)
+        # 데이터 전처리 - 열이 있는지 확인 후 처리
+        # 필수 열 처리
+        if 'Realized PnL' in df.columns:
+            df['Realized PnL'] = df['Realized PnL'].apply(parse_number)
+        else:
+            print("오류: 'Realized PnL' 열이 CSV 파일에 없습니다.")
+            return
+            
+        if 'Open Time' in df.columns:
+            df['Open Time'] = df['Open Time'].apply(parse_date)
+        else:
+            print("오류: 'Open Time' 열이 CSV 파일에 없습니다.")
+            return
+            
+        if 'Close Time' in df.columns:
+            df['Close Time'] = df['Close Time'].apply(parse_date)
+        else:
+            print("오류: 'Close Time' 열이 CSV 파일에 없습니다.")
+            return
         
-        # 트레이더 설정에 따라 분석 방식 이미 결정됨
+        # 선택적 열 처리 - 있으면 처리, 없으면 무시
+        if 'Entry Price' in df.columns:
+            df['Entry Price'] = df['Entry Price'].apply(parse_number)
+            
+        if 'Max Size' in df.columns:
+            df['Max Size'] = df['Max Size'].apply(parse_number)
+            
+        if 'Max Size USDT' in df.columns:
+            df['Max Size USDT'] = df['Max Size USDT'].apply(parse_number)
+            
+        if 'Volume' in df.columns:
+            df['Volume'] = df['Volume'].apply(parse_number)
+        
+        # 트레이더 설정에 따라 분석 방식 결정
+        use_periods = trader.get('use_periods', True)  # 기본값은 기간 구분 사용
         
         if use_periods:
             # 기간 구분이 있는 경우 (hummusXBT 같은 트레이더)

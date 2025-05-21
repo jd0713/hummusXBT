@@ -49,10 +49,17 @@ TRADERS = {
         "use_periods": False,  # 기간 구분 없음
         "description": "AutoRebalance 트레이더 분석"
     },
+    "HONG_TOP": {
+        "name": "HONG_TOP",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/D4D39BC5123A4F821729778454D8F723",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "HONG_TOP 트레이더 분석"
+    },
     "Chatosil": {
         "name": "Chatosil",
         "url": "https://portal.mirrorly.xyz/leaderboard/Binance/456E1FCF2155C31D72C5DC61DCD2C64C",
-        "initial_capital": None,  # 원금 정보 없음
+        "initial_capital": 3000000,  # 원금 정보 없음
         "use_periods": False,  # 기간 구분 없음
         "description": "Chatosil 트레이더 분석"
     },
@@ -68,7 +75,7 @@ TRADERS = {
     "RebelOfBabylon": {
         "name": "RebelOfBabylon",
         "url": "https://portal.mirrorly.xyz/leaderboard/Binance/07400C16C63B685FDAB8048CF4E8AFD2",
-        "initial_capital": 1000000,  
+        "initial_capital": 1750000,  
         "use_periods": False,  # 기간 구분 없음
         "description": "RebelOfBabylon 트레이더 분석"
     },
@@ -93,10 +100,17 @@ TRADERS = {
         "use_periods": False,  # 기간 구분 없음
         "description": "赚够三亿U就收手 | Stop When You Earn 300 Million Yuan 트레이더 분석"
     },
+    "CryptoNifeCatchN": {
+        "name": "CryptoNifeCatchN",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/A086AC7B587E11941378E95DD6C872C6",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "CryptoNifeCatchN 트레이더 분석"
+    },
     "ONLYCANDLE": {
         "name": "ONLYCANDLE",
         "url": "https://portal.mirrorly.xyz/leaderboard/Binance/616EAE3E24D9FFFA7EA8E500D102D2DC",
-        "initial_capital": None,  # 원금 정보 없음
+        "initial_capital": 1000000,  # 원금 정보 없음
         "use_periods": False,  # 기간 구분 없음
         "description": "ONLYCANDLE 트레이더 분석"
     },
@@ -110,10 +124,143 @@ TRADERS = {
     "Ohtanishohei": {
         "name": "Ohtanishohei",
         "url": "https://portal.mirrorly.xyz/leaderboard/Binance/EE2861F7029B8C98B6B000A06BC938DC",
-        "initial_capital": None,  # 원금 정보 없음
+        "initial_capital": 2000000,  # 원금 정보 없음
         "use_periods": False,  # 기간 구분 없음
         "description": "Ohtanishohei 트레이더 분석"
-    }
+    },
+    "Trader0x9e8": {
+        "name": "Trader0x9e8",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Hyperliquid/0x9e8b1e51c642f4C8b87c6BA11c53D516a218Afc4",
+        "initial_capital": 3000000,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "Trader0x9e8 트레이더 분석"
+    },
+    "HyperdashVault1": {
+        "name": "HyperdashVault1",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Hyperliquid/0x4078582C42fdb547B1397FaBB5D5A4beAB81bE9E",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "HyperdashVault1 트레이더 분석"
+    },
+    "Cyborg0578": {
+        "name": "Cyborg0578",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/5B0834121B27FD470BE7EE2B954B6970",
+        "initial_capital": 1000000,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "Cyborg0578 트레이더 분석"
+    },
+    "haleFlower": {
+        "name": "hale花花",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/D31DA0CFC550B81981E6A582E3E4B2F5",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "hale花花 트레이더 분석"
+    },
+    "musthaveluck": {
+        "name": "musthaveluck",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/61FB1D1ADC31E34B36948A75A338CCA0",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "musthaveluck 트레이더 분석"
+    },
+    "Sky": {
+        "name": "Sky",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Hyperliquid/0xDd0c5dE50D72E5eaa96816e920e41CE89C4B8888",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "Sky 트레이더 분석"
+    },
+    "Elsewhere": {
+        "name": "Elsewhere",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Hyperliquid/0x8fC7c0442e582bca195978C5a4FDeC2e7C5bB0f7",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "Elsewhere 트레이더 분석"
+    },
+    "HummusXBT_Bybit": {
+        "name": "HummusXBT_Bybit",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Bybit/ecd2cb60-f909-4806-99f8-1e2ff9ac190c",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "HummusXBT Bybit 트레이더 분석"
+    },
+    "BLACKRUN": {
+        "name": "BLACKRUN",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/D3DEEE53F5F824749BFCD3A50ACFB0E2",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "BLACKRUN 트레이더 분석"
+    },
+    "1234215": {
+        "name": "1234215",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/76E597D3511540D93F9C12517227A778",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "1234215 트레이더 분석"
+    },
+    "taedy87": {
+        "name": "taedy87",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/6C553168FC9AA9C366B8259700C4740F",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "taedy87 트레이더 분석"
+    },
+    "ILB-2": {
+        "name": "ILB-2",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/9AD56B8C3417DDCB111839DF7743DA94",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,     # 기간 구분 없음
+        "description": "ILB-2 트레이더 분석"
+    },
+    "u_guys_r_rly_dum": {
+        "name": "u_guys_r_rly_dum",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Hyperliquid/0x987163B6b482C30c2F5f3aa2760109668Eb0091d",
+        "initial_capital": 1000000,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "u_guys_r_rly_dum 트레이더 분석"
+    },
+    "a2cc5": {
+        "name": "a2cc5",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/007E14EF366059DC29AB330CD93A713B",
+        "initial_capital": 1000000,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "a2cc5 트레이더 분석"
+    },
+    "OnchainRetard": {
+        "name": "OnchainRetard",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Binance/024E5503105496A7B68D72AD29F22826",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "OnchainRetard 트레이더 분석"
+    },    
+    "AccDownOnlyPlsGibPts": {
+        "name": "AccDownOnlyPlsGibPts",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Hyperliquid/0xC4180D58e4980ae6b39C133aB3A9389ae62E8706",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "AccDownOnlyPlsGibPts 트레이더 분석"
+    },
+    "bigdestiny": {
+        "name": "bigdestiny",
+        "url": "https://portal.mirrorly.xyz/leaderboard/Hyperliquid/0x183D0567c33e7591c22540E45D2F74730b42a0ca",
+        "initial_capital": None,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "bigdestiny 트레이더 분석"
+    },
+    "majorswinger": {
+        "name": "majorswinger",
+        "url": "",
+        "initial_capital": 2000000,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "majorswinger 트레이더 분석"
+    },
+    "btcinsider": {
+        "name": "btcinsider",
+        "url": "",
+        "initial_capital": 2400000,  # 원금 정보 없음
+        "use_periods": False,  # 기간 구분 없음
+        "description": "btcinsider 트레이더 분석"
+    },
 }
 
 # 새 트레이더 추가 함수

@@ -1,0 +1,9 @@
+===== 전체 기간 Slippage Impact Analysis =====
+
+Metric               Original        Slippage 0.05%  Slippage 0.1%   Slippage 0.15% 
+Total PnL (USD)      1431850.78      1227469.22      1023087.66      818706.10      
+Total Return (%)     143.19          122.75          102.31          81.87          
+Annualized Return (%) 372.07          304.97          242.32          184.22         
+MDD (%)              -16.88          -18.31          -19.78          -21.32         
+Sharpe Ratio         4.30            3.68            3.05            2.42           
+Win Rate (%)         38.23           36.96           35.44           33.42          

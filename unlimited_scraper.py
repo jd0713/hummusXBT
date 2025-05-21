@@ -11,7 +11,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementClickInterceptedException, StaleElementReferenceException
-from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 from datetime import datetime
 import hashlib
@@ -34,8 +33,9 @@ def setup_driver():
     # We need to see the browser to interact with it
     chrome_options.add_argument("--window-size=1920,1080")
     
-    # Set up the driver
-    service = Service(ChromeDriverManager().install())
+    # Set up the driver with local ChromeDriver path
+    chromedriver_path = "/Users/jdpark/Downloads/chromedriver/chromedriver-mac-arm64/chromedriver"
+    service = Service(executable_path=chromedriver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
     return driver
 
