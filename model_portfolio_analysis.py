@@ -8,12 +8,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import seaborn as sns
+import argparse
 from datetime import datetime, timedelta
-from calendar import month_name
 from math import sqrt
 from overlap_analysis.config import model_initial_capital, trader_weight
 
-# 저장 관련 유틸리티 함수 import
+# 유틸리티 함수 import
 from utils.portfolio_utils import (
     save_summary_data,
     save_portfolio_data,
@@ -23,136 +23,43 @@ from utils.portfolio_utils import (
     save_drawdown_data,
     save_monthly_returns
 )
+from utils.markdown_parser import parse_position_markdown
+from utils.portfolio_metrics import (
+    calculate_mdd,
+    calculate_monthly_mdd,
+    calculate_annualized_return,
+    calculate_daily_returns,
+    calculate_sharpe_ratio,
+    calculate_calmar_ratio
+)
+
+# 커맨드 라인 인자 파싱
+parser = argparse.ArgumentParser(description='모델 포트폴리오 분석에 슬리피지 적용')
+parser.add_argument('--slippage', type=float, default=0.0, help='슬리피지 비율 (%, 예: 0.05는 0.05%)')
+args = parser.parse_args()
+
+# 슬리피지 비율 설정
+slippage_rate = args.slippage / 100  # 퍼센트에서 소수점으로 변환 (0.05% -> 0.0005)
 
 # 분석할 마크다운 파일 경로
 md_file_path = os.path.join('overlap_analysis', 'output', 'position_overlap_analysis.md')
 
 # Output directory for results
 output_dir = os.path.join('overlap_analysis', 'output', 'model_portfolio')
+if slippage_rate > 0:
+    output_dir = os.path.join('overlap_analysis', 'output', f'model_portfolio_slippage_{args.slippage:.2f}')
 os.makedirs(output_dir, exist_ok=True)
+
+# 슬리피지 정보 출력
+if slippage_rate > 0:
+    print(f"\n적용 슬리피지: {args.slippage:.2f}% (거래량 * {slippage_rate:.6f})")
 
 # Initial model portfolio capital
 model_capital = model_initial_capital
 print(f"Initial model portfolio capital: {model_capital:,.2f} USD")
 
-# 마크다운 파일 읽기
-with open(md_file_path, 'r', encoding='utf-8') as f:
-    lines = f.readlines()
-
-# 구간 분석 결과 파싱
-periods = []
-current_period = None
-current_section = None
-
-for line in lines:
-    line = line.strip()
-    
-    # 구간 시작 - 제목 라인 분석
-    if line.startswith('## ['):
-        if current_period is not None:
-            periods.append(current_period)
-        
-        # 새로운 구간 정보 초기화
-        current_period = {
-            'title': line,
-            'traders': {},
-            'positions': [],         # 포지션 정보를 저장하는 리스트
-            'weights': {},          # 트레이더별 가중치
-            'balance_after': {}      # 구간 종료 후 트레이더별 자산
-        }
-        
-        # 시작 시간과 종료 시간 추출
-        try:
-            time_part = line.split('] ')[1].split(' | ')[0]
-            start_time_str, end_time_str = time_part.split(' ~ ')
-            current_period['start_time_str'] = start_time_str
-            current_period['end_time_str'] = end_time_str
-            current_period['start_time'] = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M:%S')
-            current_period['end_time'] = datetime.strptime(end_time_str, '%Y-%m-%d %H:%M:%S')
-        except Exception as e:
-            print(f"Error parsing period time: {e}")
-        
-        current_section = None
-        continue
-    
-    # 표 헤더 식별
-    if line.startswith('| 트레이더 | 심볼 | 방향 |'):
-        current_section = 'positions'
-        continue
-    elif line.startswith('| 트레이더 | Weight(%) | 롱 오픈'):
-        current_section = 'weights'
-        continue
-    elif line.startswith('| 트레이더 | 구간 종료 후 자산'):
-        current_section = 'balance_after'
-        continue
-    
-    # 데이터 파싱
-    if current_period and current_section == 'positions' and line.startswith('|') and ' | ' in line and not line.startswith('|--'):
-        parts = [p.strip() for p in line.split('|')[1:-1]]
-        if len(parts) >= 8:  # 거래량(USDT) 칼럼이 추가되어 최소 8개 이상의 칼럼 필요
-            trader = parts[0]
-            symbol = parts[1]
-            direction = parts[2]
-            size_str = parts[3].replace(',', '').replace('USDT', '').strip()
-            volume_str = parts[4].replace(',', '').replace('USDT', '').strip()  # 거래량(USDT) 추출
-            
-            # 오픈 시간과 클로즈 시간 추출
-            open_time_str = parts[5].strip()  # 인덱스 변경
-            close_time_str = parts[6].strip()  # 인덱스 변경
-            
-            realized_pnl_str = parts[7].replace(',', '').replace('USDT', '').strip()  # 인덱스 변경
-            realized_pnl_pct_str = parts[8].replace('%', '').strip()  # 인덱스 변경
-            
-            try:
-                size = float(size_str)
-                volume = float(volume_str)  # 거래량 변환
-                realized_pnl = float(realized_pnl_str)
-                realized_pnl_pct = float(realized_pnl_pct_str) / 100.0  # 백분율을 소수로 변환
-                
-                # 트레이더별 실현 수익 정보 추가
-                position = {
-                    'trader': trader,
-                    'symbol': symbol,
-                    'direction': direction,
-                    'size': size,
-                    'volume': volume,  # 거래량 추가
-                    'open': open_time_str,    # 오픈 시간 저장
-                    'close': close_time_str,  # 클로즈 시간 저장
-                    'realized_pnl': realized_pnl,
-                    'realized_pnl_pct': realized_pnl_pct
-                }
-                current_period['positions'].append(position)
-                
-            except Exception as e:
-                print(f"Error parsing position for {trader}: {e}")
-    
-    elif current_period and current_section == 'weights' and line.startswith('|') and ' | ' in line and not line.startswith('|--'):
-        parts = [p.strip() for p in line.split('|')[1:-1]]
-        if len(parts) >= 8:
-            trader = parts[0]
-            weight_str = parts[1].replace('%', '').strip()
-            
-            try:
-                weight = float(weight_str) / 100.0  # 백분율을 소수로 변환
-                current_period['weights'][trader] = weight
-            except Exception as e:
-                print(f"Error parsing weight for {trader}: {e}")
-    
-    elif current_period and current_section == 'balance_after' and line.startswith('|') and ' | ' in line and not line.startswith('|--'):
-        parts = [p.strip() for p in line.split('|')[1:-1]]
-        if len(parts) >= 2:
-            trader = parts[0]
-            balance_str = parts[1].replace(',', '').replace('USDT', '').strip()
-            
-            try:
-                balance = float(balance_str)
-                current_period['balance_after'][trader] = balance
-            except Exception as e:
-                print(f"Error parsing balance for {trader}: {e}")
-
-# 마지막 구간 추가
-if current_period is not None:
-    periods.append(current_period)
+# 마크다운 파일 파싱
+periods = parse_position_markdown(md_file_path)
 
 # 모델 포트폴리오 분석
 print("\n모델 포트폴리오 자본 변화 분석:")
@@ -163,163 +70,7 @@ print("|" + "-" * 10 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + 
 print("\n| 구간 | 구간 시작 자본 | 구간 종료 자본 | 변화량 | 변화율 |")
 print("|" + "-" * 6 + "|" + "-" * 16 + "|" + "-" * 16 + "|" + "-" * 10 + "|" + "-" * 10 + "|")
 
-# MDD(Maximum Drawdown) 계산 함수
-def calculate_mdd(df):
-    # 누적 최대값 계산
-    df['cumulative_max'] = df['end_capital'].cummax()
-    # 드로다운 계산
-    df['drawdown'] = (df['end_capital'] - df['cumulative_max']) / df['cumulative_max'] * 100
-    # MDD 계산 (최저 드로다운)
-    mdd = df['drawdown'].min()
-    # MDD 발생 시점 찾기
-    mdd_idx = df['drawdown'].idxmin()
-    mdd_time = df.loc[mdd_idx, 'time']
-    # 최대값 도달 시점 (MDD 발생 직전의 피크)
-    peak_value = df.loc[mdd_idx, 'cumulative_max']
-    peak_idx = df[df['end_capital'] == peak_value].index[0]
-    peak_time = df.loc[peak_idx, 'time']
-    
-    return mdd, mdd_time, peak_time, peak_value, df.loc[mdd_idx, 'end_capital']
-
-# 월별 MDD 계산 함수
-def calculate_monthly_mdd(df):
-    df['year_month'] = pd.to_datetime(df['time']).dt.to_period('M')
-    monthly_mdd = df.groupby('year_month').apply(lambda x: calculate_mdd(x)[0]).reset_index()
-    monthly_mdd.columns = ['year_month', 'mdd']
-    return monthly_mdd
-
-# MDD 그래프 생성 함수
-def plot_mdd(df, output_path):
-    plt.figure(figsize=(14, 8))
-    plt.subplot(2, 1, 1)
-    plt.plot(pd.to_datetime(df['time']), df['end_capital'], label='Portfolio Value')
-    plt.plot(pd.to_datetime(df['time']), df['cumulative_max'], 'r--', label='Peak Value')
-    plt.title('Portfolio Value and Peak Value')
-    plt.ylabel('USD')
-    plt.grid(True)
-    plt.legend()
-    
-    plt.subplot(2, 1, 2)
-    plt.plot(pd.to_datetime(df['time']), df['drawdown'], 'r')
-    plt.fill_between(pd.to_datetime(df['time']), df['drawdown'], 0, alpha=0.3, color='red')
-    plt.title('Drawdown')
-    plt.ylabel('Drawdown (%)')
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300)
-    plt.close()
-
-# MDD 히트맵 생성 함수
-def plot_mdd_heatmap(df, output_path):
-    df['year'] = pd.to_datetime(df['time']).dt.year
-    df['month'] = pd.to_datetime(df['time']).dt.month
-    df['day'] = pd.to_datetime(df['time']).dt.day
-    
-    monthly_data = df.groupby(['year', 'month']).agg(
-        start_capital = ('start_capital', 'first'),
-        end_capital = ('end_capital', 'last'),
-        min_dd = ('drawdown', 'min')
-    ).reset_index()
-    
-    # 월별 수익률 계산
-    monthly_data['return_pct'] = (monthly_data['end_capital'] / monthly_data['start_capital'] - 1) * 100
-    
-    # 피벗 테이블 생성
-    pivot_return = monthly_data.pivot(index='month', columns='year', values='return_pct').fillna(0)
-    pivot_dd = monthly_data.pivot(index='month', columns='year', values='min_dd').fillna(0)
-    
-    # 월 이름으로 인덱스 변경
-    pivot_return.index = [month_name[i] for i in pivot_return.index]
-    pivot_dd.index = [month_name[i] for i in pivot_dd.index]
-    
-    # 히트맵 그리기
-    fig, axes = plt.subplots(2, 1, figsize=(12, 16))
-    
-    # 수익률 히트맵
-    sns.heatmap(pivot_return, annot=True, cmap='RdYlGn', fmt='.2f', ax=axes[0], cbar_kws={'label': '%'})
-    axes[0].set_title('Monthly Returns (%)')
-    axes[0].set_ylabel('')
-    
-    # 드로다운 히트맵
-    sns.heatmap(pivot_dd, annot=True, cmap='RdYlBu_r', fmt='.2f', ax=axes[1], cbar_kws={'label': '%'})
-    axes[1].set_title('Monthly Maximum Drawdown (%)')
-    axes[1].set_ylabel('')
-    
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300)
-    plt.close()
-
-# 연환산 수익률 계산 함수
-def calculate_annualized_return(df):
-    # 처음 기록과 마지막 기록의 날짜 차이 계산 (일 단위)
-    start_date = pd.to_datetime(df['time'].iloc[0])
-    end_date = pd.to_datetime(df['time'].iloc[-1])
-    days = (end_date - start_date).days
-    
-    # 리턴 계산
-    total_return = df['end_capital'].iloc[-1] / df['start_capital'].iloc[0]
-    
-    # 연환산 수익률 계산
-    if days > 0:
-        annualized_return = (total_return ** (365 / days)) - 1
-        return annualized_return * 100  # 퍼센트로 변환
-    else:
-        return 0
-
-# 일별 수익률 계산 함수
-def calculate_daily_returns(df):
-    # 시간 정렬
-    df = df.sort_values('time')
-    
-    # 시간 변환
-    df['date'] = pd.to_datetime(df['time']).dt.date
-    
-    # 일별 데이터로 그룹화
-    daily_data = df.groupby('date').agg({'end_capital': 'last'}).reset_index()
-    
-    # 일별 수익률 계산
-    daily_data['prev_capital'] = daily_data['end_capital'].shift(1)
-    daily_data = daily_data.dropna()  # 첫번째 행(이전 값이 없는) 제거
-    
-    if len(daily_data) > 0:
-        daily_data['daily_return'] = (daily_data['end_capital'] / daily_data['prev_capital']) - 1
-        return daily_data
-    else:
-        return pd.DataFrame(columns=['date', 'end_capital', 'prev_capital', 'daily_return'])
-
-# 샤프 비율(Sharpe Ratio) 계산 함수
-def calculate_sharpe_ratio(daily_returns_df, risk_free_rate=0.02):
-    # 일별 수익률 없으면 계산 불가
-    if len(daily_returns_df) <= 1:
-        return 0
-    
-    # 일별 수익률 평균
-    avg_daily_return = daily_returns_df['daily_return'].mean()
-    
-    # 일별 수익률 표준편차
-    std_daily_return = daily_returns_df['daily_return'].std()
-    
-    # 일별 무위험 이자율
-    daily_risk_free_rate = (1 + risk_free_rate) ** (1/365) - 1
-    
-    # 샤프 비율 계산
-    if std_daily_return > 0:
-        sharpe_ratio = (avg_daily_return - daily_risk_free_rate) / std_daily_return
-        # 연단위 샤프 비율로 변환
-        annual_sharpe = sharpe_ratio * sqrt(252)  # 거래일 252일 기준
-        return annual_sharpe
-    else:
-        return 0
-
-# 칼마 비율(Calmar Ratio) 계산 함수
-def calculate_calmar_ratio(annualized_return, max_drawdown):
-    # 최대 낙폭이 없거나 0이면 계산 불가
-    if max_drawdown >= 0:
-        return 0
-    
-    # 칼마 비율 계산 (연환산 수익률 / 절대값(MDD))
-    calmar_ratio = annualized_return / abs(max_drawdown)  # 절대값 사용
-    return calmar_ratio
+# 성능 지표 계산 함수들은 utils.portfolio_metrics 모듈로 이동
 
 # 결과 데이터 준비
 results_data = []
@@ -371,6 +122,12 @@ for i, period in enumerate(periods):
     for pos in closed_positions:
         trader = pos['trader']
         realized_pnl = pos.get('realized_pnl', 0)
+        
+        # 슬리피지 적용 (volume이 있는 경우에만)
+        if slippage_rate > 0 and 'volume' in pos and pos['volume'] is not None:
+            volume = float(pos['volume'])
+            slippage_cost = volume * slippage_rate
+            realized_pnl -= slippage_cost
         
         if trader not in trader_pnl:
             trader_pnl[trader] = 0

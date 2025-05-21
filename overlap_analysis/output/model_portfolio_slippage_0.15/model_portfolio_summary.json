@@ -1,0 +1,19 @@
+{
+  "total_return_pct": 256.1782989730181,
+  "annualized_return_pct": 162.19535419201296,
+  "std_dev_pct": 2.1878602486660093,
+  "sharpe_ratio": 3.8278738349150676,
+  "calmar_ratio": 20.23534850852413,
+  "max_drawdown_pct": -8.015446540181319,
+  "max_drawdown_duration_days": 59,
+  "peak_value": 110879.88672171635,
+  "peak_time": "2024-04-16 07:05:00",
+  "valley_value": 101992.36867772357,
+  "valley_time": "2024-06-14 19:07:00",
+  "initial_capital": 100000,
+  "final_capital": 356178.29897301807,
+  "trading_days": 251,
+  "start_date": "2024-01-24 04:02:00",
+  "end_date": "2025-05-20 00:08:00",
+  "period_days": 481
+}
