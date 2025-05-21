@@ -4,8 +4,9 @@ from data_loader import load_all_positions, detect_time_columns, parse_and_conve
 from overlap_analyzer import analyze_all_periods
 from report_generator import generate_markdown
 import os
-from topn_analysis import top_n_by_net_exposure, top_n_by_concurrent_positions, top_n_by_long_ratio, top_n_by_short_ratio, top_n_by_net_ratio
-from report_generator import generate_topn_net_exposure_md, generate_topn_concurrent_positions_md, generate_topn_long_ratio_md, generate_topn_short_ratio_md, generate_topn_net_ratio_md
+# 단순 롱/숏 관련 함수 제거
+from topn_analysis import top_n_by_concurrent_positions, top_n_by_net_ratio
+from report_generator import generate_topn_concurrent_positions_md, generate_topn_net_ratio_md
 from portfolio_net_exposure_export import export_portfolio_net_exposure
 
 if __name__ == "__main__":
@@ -31,41 +32,42 @@ if __name__ == "__main__":
                     'open': open_t,
                     'close': close_t,
                 })
-                # 규모 데이터 추출 (잠시 사용)
-                max_size = row.get('Max Size USDT', row.get('Size_USDT_Numeric', 0))
+                # Max Size USDT 필드 가져오기 (주요 필드)
+                max_size_usdt = row.get('Max Size USDT', 0)
                 
-                # 거래량 데이터 추출 - Volume 컬럼이 있으면 그 값 사용, 아니면 규모의 2배로 계산
+                # 사이즈 추출 (size) - 트레이더 요약 계산용
+                try:
+                    # 숫자 형식으로 변환
+                    if isinstance(max_size_usdt, str):
+                        # 문자열에서 숫자만 추출
+                        import re
+                        numeric_str = re.sub(r'[^0-9.]', '', max_size_usdt)
+                        size = float(numeric_str) if numeric_str else 0.0
+                    else:
+                        # 이미 숫자인 경우
+                        size = float(max_size_usdt)
+                except Exception as e:
+                    print(f"[WARN] Error extracting size from {max_size_usdt}: {e}")
+                    size = 0.0
+                    
+                # 거래량 추출 (volume) - 표시용
                 if 'Volume' in row:
+                    # Volume 필드가 있으면 직접 사용
                     volume = row['Volume']
                 else:
-                    # 문자열인 경우 숫자로 변환 후 2배
+                    # Volume 필드가 없으면 Max Size USDT의 2배로 계산
                     try:
-                        # Size_USDT_Numeric가 존재하면 사용
-                        if 'Size_USDT_Numeric' in row:
-                            numeric_size = float(row['Size_USDT_Numeric'])
-                            volume = f"{numeric_size * 2:.2f} USDT"
-                        # Max Size USDT가 문자열이면 숫자만 추출
-                        elif isinstance(max_size, str):
-                            # 문자열에서 숫자만 추출
-                            import re
-                            numeric_str = re.sub(r'[^0-9.]', '', max_size)
-                            if numeric_str:
-                                numeric_size = float(numeric_str)
-                                volume = f"{numeric_size * 2:.2f} USDT"
-                            else:
-                                volume = "0 USDT"  # 숫자를 추출할 수 없는 경우
-                        else:
-                            # 이미 숫자인 경우
-                            volume = f"{float(max_size) * 2:.2f} USDT"
+                        volume = f"{size * 2:.2f} USDT"
                     except Exception as e:
-                        print(f"[WARN] Error calculating volume for {max_size}: {e}")
-                        volume = f"{max_size} (x2)"  # 오류 발생 시 대체 값
-                
+                        print(f"[WARN] Error calculating volume from size {size}: {e}")
+                        volume = f"{max_size_usdt} (x2)"  # 오류 발생 시 대체 값
+                    
                 all_positions_raw.append({
                     'trader': trader,
                     'symbol': row.get('Symbol', ''),
                     'direction': row.get('Direction', ''),
-                    'volume': volume,  # 거래량 데이터 저장
+                    'size': size,  # 포지션 크기(톨더 요약 계산용)
+                    'volume': volume,  # 거래량 데이터 (표시용)
                     'open': open_t,
                     'close': close_t,
                     'realized_pnl': row.get('Realized PnL', ''),
@@ -90,12 +92,7 @@ if __name__ == "__main__":
         f.write('\n'.join(md_lines))
     print(f"\n분석 결과가 {md_path} 에 저장되었습니다.")
 
-    # Top 5 최대 순노출 구간 마크다운
-    top5_net = top_n_by_net_exposure(periods, n=5)
-    md_top5_net = generate_topn_net_exposure_md(top5_net, trader_weight, n=5)
-    with open(os.path.join(OUTPUT_DIR, 'top5_net_exposure_periods.md'), 'w', encoding='utf-8') as f:
-        f.write('\n'.join(md_top5_net))
-    print("Top 5 최대 순노출(USDT) 구간 리포트가 저장되었습니다.")
+    # Top 5 최대 순노출(USDT) 구간 리포트 생성 로직 제거
 
     # Top 5 최대 동시 포지션 구간 마크다운
     top5_conc = top_n_by_concurrent_positions(periods, n=5)
@@ -104,19 +101,16 @@ if __name__ == "__main__":
         f.write('\n'.join(md_top5_conc))
     print("Top 5 최대 동시 포지션 구간 리포트가 저장되었습니다.")
 
-    # Top 5 롱 비율(%) 최대 구간
-    top5_long = top_n_by_long_ratio(periods, n=5)
-    md_top5_long = generate_topn_long_ratio_md(top5_long, n=5)
-    with open(os.path.join(OUTPUT_DIR, 'top5_long_ratio_periods.md'), 'w', encoding='utf-8') as f:
-        f.write('\n'.join(md_top5_long))
-    print("Top 5 롱 비율(%) 최대 구간 리포트가 저장되었습니다.")
-
-    # Top 5 숏 비율(%) 최대 구간
-    top5_short = top_n_by_short_ratio(periods, n=5)
-    md_top5_short = generate_topn_short_ratio_md(top5_short, n=5)
-    with open(os.path.join(OUTPUT_DIR, 'top5_short_ratio_periods.md'), 'w', encoding='utf-8') as f:
-        f.write('\n'.join(md_top5_short))
-    print("Top 5 숏 비율(%) 최대 구간 리포트가 저장되었습니다.")
+    # 단순 롱/숏 관련 함수 제거 - 순노출 기준 리포트만 유지
+    # 해당 파일들이 존재하는 경우 삭제
+    for file_name in ['top5_long_ratio_periods.md', 'top5_short_ratio_periods.md']:
+        file_path = os.path.join(OUTPUT_DIR, file_name)
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                print(f"{file_name} 파일이 삭제되었습니다.")
+            except Exception as e:
+                print(f"{file_name} 파일 삭제 실패: {e}")
 
     # Top 5 롱 순비율(%) 최대 구간
     top5_net_long = top_n_by_net_ratio(periods, n=5, direction='long')

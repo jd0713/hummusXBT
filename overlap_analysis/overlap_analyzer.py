@@ -44,11 +44,12 @@ def analyze_all_periods(all_positions: List[Dict], all_positions_raw: List[Dict]
                 # 포지션 활성 여부 판단 로직 전면 재정비
                 # report_generator.py와 일관된 경계 조건 처리 방식 구현
                 
-                # 경계 케이스: 포지션이 현재 구간의 끝에서 시작하는 경우 제외
-                # 이 경우는 다음 구간에 포함되어야 함
-                boundary_case = (pos['open'] == current_time)
-                if boundary_case:
-                    continue  # 현재 구간에서 제외
+                # 경계 케이스 처리 개선:
+                # 1. 포지션이 구간의 시작 시간에 열린 경우 - 포함시킴
+                # 2. 포지션이 구간의 종료 시간에 열린 경우 - 제외함(다음 구간에 포함)
+                if pos['open'] == current_time:
+                    # 현재 구간의 끝에서 시작하는 경우 제외 - 다음 구간에 포함될 것임
+                    continue
                     
                 # 1. 일반적인 활성 포지션 조건: 포지션 오픈 시간 < 현재 시간 < 포지션 클로즈 시간
                 active_during_period = (pos['open'] < current_time < pos['close'])
@@ -88,6 +89,7 @@ def analyze_all_periods(all_positions: List[Dict], all_positions_raw: List[Dict]
             for p in active_positions:
                 trader = p['trader']
                 try:
+                    # size 가져오기 - 포지션 크기 계산용
                     size = float(str(p['size']).replace('USDT','').replace(',','').strip())
                     size = abs(size)
                 except:
